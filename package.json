@@ -23,6 +23,8 @@
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
     "morgan": "^1.10.0",
-    "prisma": "^6.16.2"
+    "prisma": "^6.16.2",
+    "bcryptjs": "^3.0.2",
+    "jsonwebtoken": "^9.0.2"
   }
 }
