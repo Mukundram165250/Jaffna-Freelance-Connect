@@ -3,6 +3,7 @@ const healthRouter = require("./health");
 const authRouter = require("./auth");
 const profileRouter = require("./profile");
 const jobsRouter = require("./jobs");
+const applicationsRouter = require("./applications");
 
 const router = express.Router();
 
@@ -10,5 +11,6 @@ router.use("/health", healthRouter);
 router.use("/auth", authRouter);
 router.use("/profile", profileRouter);
 router.use("/jobs", jobsRouter);
+router.use("/applications", applicationsRouter);
 
 module.exports = router;
