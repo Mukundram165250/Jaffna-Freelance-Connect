@@ -1,5 +1,5 @@
 /* Jaffna Freelance Connect — API-backed frontend */
-const API_BASE = (window.JFC_API_URL || '/api').replace(/\\/$/, '');
+const API_BASE = (window.JFC_API_URL || '/api').replace(/\/$/, '');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtLKR = n => n == null ? '—' : 'Rs ' + Number(n).toLocaleString('en-LK');
 const initials = name => String(name || '?').split(' ').map(x => x[0]).slice(0,2).join('').toUpperCase();
