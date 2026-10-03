@@ -1,0 +1,17 @@
+const app = require("./app");
+const env = require("./config/env");
+
+const server = app.listen(env.port, "0.0.0.0", () => {
+  console.log(`Jaffna Freelance Connect running on http://0.0.0.0:${env.port}`);
+});
+
+function shutdown(signal) {
+  console.log(`${signal} received. Shutting down gracefully...`);
+
+  server.close(() => {
+    process.exit(0);
+  });
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

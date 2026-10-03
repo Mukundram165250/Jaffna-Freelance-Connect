@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CLIENT
+  FREELANCER
+  ADMIN
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ExperienceLevel {
+  BEGINNER
+  INTERMEDIATE
+  EXPERT
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum ApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  passwordHash      String?
+  displayName       String
+  role              UserRole           @default(FREELANCER)
+  phone             String?
+  location          String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  jobs              Job[]
+  freelancerProfile FreelancerProfile?
+  applications      Application[]
+}
+
+model FreelancerProfile {
+  id              String          @id @default(uuid())
+  userId          String          @unique
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline        String?
+  bio             String?
+  skills          String[]
+  experienceLevel ExperienceLevel @default(BEGINNER)
+  hourlyRate      Decimal?        @db.Decimal(12, 2)
+  availability    String?
+  moderation      ModerationStatus @default(PENDING)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  applications    Application[]
+}
+
+model Job {
+  id             String           @id @default(uuid())
+  clientId       String
+  client         User             @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  title          String
+  description    String
+  category       String?
+  skills         String[]
+  budgetMin      Decimal?         @db.Decimal(12, 2)
+  budgetMax      Decimal?         @db.Decimal(12, 2)
+  location       String?
+  contact        String?
+  status         JobStatus        @default(OPEN)
+  moderation     ModerationStatus @default(PENDING)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  applications   Application[]
+
+  @@index([clientId])
+  @@index([status, moderation])
+  @@index([category])
+  @@index([location])
+}
+
+model Application {
+  id                   String             @id @default(uuid())
+  jobId                String
+  freelancerId         String
+  job                  Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  freelancer           User               @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  freelancerProfileId  String?
+  freelancerProfile    FreelancerProfile? @relation(fields: [freelancerProfileId], references: [id], onDelete: SetNull)
+  coverMessage         String?
+  status               ApplicationStatus  @default(PENDING)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@unique([jobId, freelancerId])
+  @@index([freelancerId])
+  @@index([status])
+}

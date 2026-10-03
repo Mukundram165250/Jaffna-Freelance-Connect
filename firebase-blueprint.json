@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access for Jaffna Freelance Connect.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["CLIENT", "FREELANCER", "ADMIN"] },
+        "phone": { "type": "string", "maxLength": 30 },
+        "location": { "type": "string", "maxLength": 150 },
+        "accountStatus": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "displayName", "role"]
+    },
+    "FreelancerProfile": {
+      "title": "FreelancerProfile",
+      "description": "Public and professional details of a freelancer in Jaffna.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "headline": { "type": "string", "maxLength": 160 },
+        "bio": { "type": "string", "maxLength": 2000 },
+        "skills": { "type": "array" },
+        "experienceLevel": { "type": "string", "enum": ["BEGINNER", "INTERMEDIATE", "EXPERT"] },
+        "hourlyRate": { "type": "number" },
+        "availability": { "type": "string", "maxLength": 200 },
+        "moderation": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "skills", "experienceLevel", "moderation"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "Job listing posted by a client looking for talent in Jaffna.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "clientId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 160 },
+        "description": { "type": "string", "maxLength": 5000 },
+        "category": { "type": "string", "maxLength": 100 },
+        "skills": { "type": "array" },
+        "budgetMin": { "type": "number" },
+        "budgetMax": { "type": "number" },
+        "location": { "type": "string", "maxLength": 150 },
+        "contact": { "type": "string", "maxLength": 200 },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED", "CANCELLED"] },
+        "moderation": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["clientId", "title", "description", "status", "moderation"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "Job application submitted by a freelancer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "jobId": { "type": "string", "maxLength": 128 },
+        "freelancerId": { "type": "string", "maxLength": 128 },
+        "freelancerProfileId": { "type": "string", "maxLength": 128 },
+        "coverMessage": { "type": "string", "maxLength": 3000 },
+        "status": { "type": "string", "enum": ["PENDING", "ACCEPTED", "REJECTED", "WITHDRAWN"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["jobId", "freelancerId", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Private notification for a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "maxLength": 60 },
+        "title": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "relatedJobId": { "type": "string", "maxLength": 128 },
+        "relatedApplicationId": { "type": "string", "maxLength": 128 },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "message"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "List of authorized administrator UIDs.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User account documents keyed by Firebase Auth UID."
+    },
+    "/freelancerProfiles/{userId}": {
+      "schema": "FreelancerProfile",
+      "description": "Freelancer professional profile keyed by Firebase Auth UID."
+    },
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Client posted jobs."
+    },
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "Freelancer job applications."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Private user notifications."
+    },
+    "/admins/{userId}": {
+      "schema": "Admin",
+      "description": "Admin registry for Firestore rule RBAC verification."
+    }
+  }
+}

@@ -1,0 +1,171 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == "mukundram165250@gmail.com"
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Admins collection
+    match /admins/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+
+      // New users can only register as CLIENT or FREELANCER (never self-assign ADMIN)
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && incoming().uid == userId
+        && incoming().email is string
+        && incoming().displayName is string
+        && (incoming().role == 'CLIENT' || incoming().role == 'FREELANCER')
+        && incoming().role != 'ADMIN';
+
+      // Users can update their own details, but cannot change their role or UID
+      allow update: if (
+        isOwner(userId)
+        && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'uid', 'email'])
+      ) || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // Freelancer Profiles
+    match /freelancerProfiles/{userId} {
+      allow get: if isOwner(userId) || existing().moderation == 'APPROVED' || isAdmin();
+      allow list: if resource.data.moderation == 'APPROVED'
+        || (isSignedIn() && resource.data.userId == request.auth.uid)
+        || isAdmin();
+
+      // Profile creation defaults to PENDING moderation
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && incoming().userId == userId
+        && incoming().skills is list
+        && incoming().skills.size() <= 30
+        && incoming().moderation == 'PENDING';
+
+      // Freelancers cannot self-approve their moderation status
+      allow update: if (
+        isOwner(userId)
+        && !incoming().diff(existing()).affectedKeys().hasAny(['moderation', 'userId'])
+      ) || isAdmin();
+
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Jobs collection
+    match /jobs/{jobId} {
+      allow get: if existing().moderation == 'APPROVED'
+        || (isSignedIn() && existing().clientId == request.auth.uid)
+        || isAdmin();
+
+      allow list: if resource.data.moderation == 'APPROVED'
+        || (isSignedIn() && resource.data.clientId == request.auth.uid)
+        || isAdmin();
+
+      // Client creates job in PENDING moderation
+      allow create: if isSignedIn()
+        && isValidId(jobId)
+        && incoming().clientId == request.auth.uid
+        && incoming().title is string
+        && incoming().title.size() <= 160
+        && incoming().description is string
+        && incoming().description.size() <= 5000
+        && incoming().status == 'OPEN'
+        && incoming().moderation == 'PENDING';
+
+      // Clients cannot change moderation or clientId directly
+      allow update: if (
+        isSignedIn()
+        && existing().clientId == request.auth.uid
+        && !incoming().diff(existing()).affectedKeys().hasAny(['moderation', 'clientId'])
+      ) || isAdmin();
+
+      allow delete: if (isSignedIn() && existing().clientId == request.auth.uid) || isAdmin();
+    }
+
+    // Applications collection
+    match /applications/{applicationId} {
+      allow get: if isSignedIn() && (
+        existing().freelancerId == request.auth.uid
+        || get(/databases/$(database)/documents/jobs/$(existing().jobId)).data.clientId == request.auth.uid
+        || isAdmin()
+      );
+
+      allow list: if isSignedIn() && (
+        resource.data.freelancerId == request.auth.uid
+        || isAdmin()
+      );
+
+      // Only authenticated freelancers can apply, status begins as PENDING
+      allow create: if isSignedIn()
+        && isValidId(applicationId)
+        && incoming().freelancerId == request.auth.uid
+        && incoming().status == 'PENDING';
+
+      // Freelancer can withdraw only if still PENDING
+      // Client of the job can accept or reject only if still PENDING
+      allow update: if (
+        isSignedIn()
+        && existing().freelancerId == request.auth.uid
+        && existing().status == 'PENDING'
+        && incoming().status == 'WITHDRAWN'
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+      ) || (
+        isSignedIn()
+        && get(/databases/$(database)/documents/jobs/$(existing().jobId)).data.clientId == request.auth.uid
+        && existing().status == 'PENDING'
+        && (incoming().status == 'ACCEPTED' || incoming().status == 'REJECTED')
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+      ) || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isAdmin() || (isSignedIn() && incoming().userId == request.auth.uid);
+      allow update: if isSignedIn()
+        && existing().userId == request.auth.uid
+        && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}
