@@ -88,7 +88,11 @@ async function fetchUserProfile(uid, fallbackEmail = "", fallbackDisplayName = "
       createdAt: profileData?.createdAt || new Date().toISOString()
     };
   } catch (err) {
-    console.error("Error fetching user profile:", err);
+    if (typeof window !== "undefined" && window.handleFirestoreError) {
+      window.handleFirestoreError(err, 'get', `users/${uid}`);
+    } else {
+      console.error("Error fetching user profile:", err);
+    }
     return {
       uid,
       email: fallbackEmail,
@@ -96,6 +100,14 @@ async function fetchUserProfile(uid, fallbackEmail = "", fallbackDisplayName = "
       role: (fallbackEmail === 'mukundram165250@gmail.com') ? 'ADMIN' : 'FREELANCER'
     };
   }
+}
+
+// Ready promise to prevent race conditions during page load
+let resolveAuthReady;
+if (typeof window !== 'undefined') {
+  window.JFCAuthReady = new Promise((resolve) => {
+    resolveAuthReady = resolve;
+  });
 }
 
 const JFCAuth = {
@@ -150,7 +162,14 @@ const JFCAuth = {
       updatedAt: new Date().toISOString()
     };
 
-    await setDoc(userRef, userData);
+    try {
+      await setDoc(userRef, userData);
+    } catch (err) {
+      if (typeof window !== "undefined" && window.handleFirestoreError) {
+        window.handleFirestoreError(err, 'create', `users/${user.uid}`, auth);
+      }
+      throw err;
+    }
     this._notify(userData);
     return userData;
   },
@@ -200,16 +219,32 @@ const JFCAuth = {
 };
 
 // Listen to Firebase Auth state
+let isFirstAuthCheck = true;
 onAuthStateChanged(auth, async (firebaseUser) => {
-  if (firebaseUser) {
-    const profile = await fetchUserProfile(
-      firebaseUser.uid,
-      firebaseUser.email,
-      firebaseUser.displayName
-    );
-    JFCAuth._notify(profile);
-  } else {
-    JFCAuth._notify(null);
+  try {
+    if (firebaseUser) {
+      const profile = await fetchUserProfile(
+        firebaseUser.uid,
+        firebaseUser.email,
+        firebaseUser.displayName
+      );
+      JFCAuth._notify(profile);
+      if (isFirstAuthCheck && resolveAuthReady) {
+        isFirstAuthCheck = false;
+        resolveAuthReady(profile);
+      }
+    } else {
+      JFCAuth._notify(null);
+      if (isFirstAuthCheck && resolveAuthReady) {
+        isFirstAuthCheck = false;
+        resolveAuthReady(null);
+      }
+    }
+  } catch (err) {
+    if (isFirstAuthCheck && resolveAuthReady) {
+      isFirstAuthCheck = false;
+      resolveAuthReady(null);
+    }
   }
 });
 

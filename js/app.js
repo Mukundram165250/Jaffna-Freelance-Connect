@@ -491,6 +491,14 @@ function go(path){location.hash='#'+path;}
 (async()=>{
   document.getElementById('navToggle').onclick=()=>document.getElementById('navLinks').classList.toggle('open');
   window.addEventListener('hashchange',route);
+  if (typeof window !== 'undefined' && window.JFCAuthReady) {
+    try {
+      await Promise.race([
+        window.JFCAuthReady,
+        new Promise(r => setTimeout(r, 1200))
+      ]);
+    } catch(e) {}
+  }
   await Auth.load();
   await route();
 })();
