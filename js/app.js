@@ -202,6 +202,27 @@ Pages.login = () => {
           </button>
         </form>
 
+        <!-- PASSWORD RESET COMPONENT -->
+        <form id="resetPasswordForm" class="auth-form" style="display:none;" novalidate>
+          <div class="notice" style="margin-bottom:18px;">
+            <i class="fa-solid fa-key"></i>
+            Enter your registered email address and we will send a password reset link to your inbox via Firebase.
+          </div>
+
+          <div class="form-group">
+            <label for="resetEmailInput"><i class="fa-solid fa-envelope"></i> Email Address</label>
+            <input id="resetEmailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+          </div>
+
+          <button type="submit" id="btnResetPasswordSubmit" class="btn btn-primary btn-block">
+            <span class="btn-label"><i class="fa-solid fa-paper-plane"></i> Send Password Reset Link</span>
+          </button>
+
+          <button type="button" id="btnBackToLoginFromReset" class="btn btn-block btn-outline" style="margin-top:12px;">
+            <i class="fa-solid fa-arrow-left"></i> Back to Sign In
+          </button>
+        </form>
+
         <!-- REGISTER FORM -->
         <form id="registerForm" class="auth-form" style="display:none;" novalidate>
           <div class="form-group">
@@ -293,30 +314,53 @@ async function wire(route, parts) {
     };
     const hideAlert = () => { if (alertBox) alertBox.style.display = 'none'; };
 
-    // Tabs
+    // Tabs & Forms
+    const authTabs = document.querySelector('.auth-tabs');
     const tabLogin = document.getElementById('tabLoginBtn') || document.querySelector('.auth-tabs button[data-tab="login"]');
     const tabRegister = document.getElementById('tabRegisterBtn') || document.querySelector('.auth-tabs button[data-tab="register"]');
     const lf = document.getElementById('loginForm');
     const rf = document.getElementById('registerForm');
+    const pf = document.getElementById('resetPasswordForm');
     const heading = document.getElementById('authHeading');
     const subhead = document.getElementById('authSubheading');
 
     const switchTab = (tab) => {
       hideAlert();
       if (tab === 'login') {
+        if (authTabs) authTabs.style.display = 'flex';
         tabLogin?.classList.add('active');
         tabRegister?.classList.remove('active');
         if (lf) lf.style.display = '';
         if (rf) rf.style.display = 'none';
+        if (pf) pf.style.display = 'none';
         if (heading) heading.textContent = 'Welcome Back 👋';
         if (subhead) subhead.textContent = 'Sign in or create your account to connect with Jaffna\'s top opportunities';
-      } else {
+      } else if (tab === 'register') {
+        if (authTabs) authTabs.style.display = 'flex';
         tabRegister?.classList.add('active');
         tabLogin?.classList.remove('active');
         if (lf) lf.style.display = 'none';
         if (rf) rf.style.display = '';
+        if (pf) pf.style.display = 'none';
         if (heading) heading.textContent = 'Join Jaffna Freelance 🚀';
         if (subhead) subhead.textContent = 'Create your account to showcase skills or hire verified local talent';
+      } else if (tab === 'reset') {
+        if (authTabs) authTabs.style.display = 'none';
+        tabLogin?.classList.remove('active');
+        tabRegister?.classList.remove('active');
+        if (lf) lf.style.display = 'none';
+        if (rf) rf.style.display = 'none';
+        if (pf) pf.style.display = '';
+        if (heading) heading.textContent = 'Reset Password 🔑';
+        if (subhead) subhead.textContent = 'Enter your account email to receive a password reset link';
+
+        // Auto-fill reset email input with value from login input if present
+        const currentEmail = document.getElementById('loginEmailInput')?.value.trim();
+        const resetEmailInput = document.getElementById('resetEmailInput');
+        if (resetEmailInput && currentEmail) {
+          resetEmailInput.value = currentEmail;
+        }
+        resetEmailInput?.focus();
       }
     };
 
@@ -335,24 +379,65 @@ async function wire(route, parts) {
       };
     });
 
-    // Forgot password
+    // Forgot password link -> Switch to password reset component
     const btnForgot = document.getElementById('btnForgotPass');
     if (btnForgot) {
-      btnForgot.onclick = async () => {
-        const email = document.getElementById('loginEmailInput')?.value.trim();
-        if (!email) {
-          showAlert('Please type your email address above first, then click Forgot password.');
+      btnForgot.onclick = () => {
+        switchTab('reset');
+      };
+    }
+
+    // Back to Login from password reset component
+    const btnBackToLogin = document.getElementById('btnBackToLoginFromReset');
+    if (btnBackToLogin) {
+      btnBackToLogin.onclick = () => {
+        switchTab('login');
+      };
+    }
+
+    // Password reset form submission -> triggers Firebase sendPasswordResetEmail
+    if (pf) {
+      pf.onsubmit = async (e) => {
+        e.preventDefault();
+        hideAlert();
+        const resetEmailInput = document.getElementById('resetEmailInput');
+        const email = resetEmailInput?.value.trim();
+        const submitBtn = document.getElementById('btnResetPasswordSubmit');
+        const origHTML = submitBtn?.innerHTML;
+
+        if (!email || !email.includes('@')) {
+          showAlert('Please enter a valid email address.');
+          resetEmailInput?.focus();
           return;
         }
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending link...';
+        }
+
         try {
           if (window.JFCAuth) {
-            await window.JFCAuth.forgotPassword(email);
-            showAlert('Password reset link sent to ' + email + '. Check your inbox!', 'success');
+            await window.JFCAuth.sendPasswordResetEmail(email);
           } else {
-            showAlert('Password reset is enabled via Firebase Authentication.');
+            throw new Error('Authentication service not ready. Please try again.');
           }
+          showAlert('Password reset link sent to ' + email + '! Check your inbox and spam folder.', 'success');
         } catch (err) {
-          showAlert(err.message);
+          let msg = err.message || 'Failed to send password reset email.';
+          if (msg.includes('auth/user-not-found')) {
+            msg = 'No user account found with this email address.';
+          } else if (msg.includes('auth/invalid-email')) {
+            msg = 'Please enter a valid email address.';
+          } else if (msg.includes('auth/too-many-requests')) {
+            msg = 'Too many requests. Please wait a few moments before trying again.';
+          }
+          showAlert(msg);
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHTML;
+          }
         }
       };
     }

@@ -212,6 +212,10 @@ const JFCAuth = {
     return true;
   },
 
+  async sendPasswordResetEmail(email) {
+    return this.forgotPassword(email);
+  },
+
   async logout() {
     await signOut(auth);
     this._notify(null);
