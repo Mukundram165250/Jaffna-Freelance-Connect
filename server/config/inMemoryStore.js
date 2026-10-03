@@ -3,6 +3,19 @@ const crypto = require("crypto");
 // Seed data
 const users = [
   {
+    id: "usr-supreme-admin",
+    email: "mukundram165250@gmail.com",
+    // Hash of 'AdminPassword123!'
+    passwordHash: "$2b$10$pkdNVBHZarKgvo0tZzpXfeDlKBSlxI6.jOGw.j8X1GmHupx7ED2lK",
+    displayName: "Mukundram",
+    role: "ADMIN",
+    isSupremeAdmin: true,
+    phone: "+94 77 111 2233",
+    location: "Jaffna",
+    createdAt: new Date("2026-01-01T08:00:00Z"),
+    updatedAt: new Date("2026-01-01T08:00:00Z")
+  },
+  {
     id: "usr-admin-1",
     email: "admin@jaffnafreelance.lk",
     // Hash of 'AdminPassword123!'

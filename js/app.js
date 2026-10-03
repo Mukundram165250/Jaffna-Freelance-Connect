@@ -271,7 +271,17 @@ Pages.login = () => {
 Pages.admin = async () => {
   if (!Auth.user || Auth.user.role !== 'ADMIN') return '<div class="container"><div class="auth-wrap"><h2>🛡️ Admin Access</h2><p class="sub">Administrators only.</p><a href="#/login" class="btn btn-primary btn-block">Login</a></div></div>';
   let d={counts:{}}; try { d=(await api('/admin/dashboard')).data; } catch(e) { return '<div class="container"><div class="empty">'+esc(e.message)+'</div></div>'; }
-  return '<div class="page-head"><div class="container"><h1><i class="fa-solid fa-gauge-high" style="color:var(--primary)"></i> Admin Dashboard</h1><p>Moderate jobs and freelancer profiles</p></div></div><div class="container" style="padding-bottom:64px"><div class="admin-stats"><div class="stat-card"><div class="ico"><i class="fa-solid fa-hourglass-half"></i></div><div><b>'+d.counts.pendingJobs+d.counts.pendingFreelancers+'</b><span>Pending Approval</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-briefcase"></i></div><div><b>'+d.counts.jobs+'</b><span>Total Jobs</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-users"></i></div><div><b>'+d.counts.freelancers+'</b><span>Freelancers</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-user-check"></i></div><div><b>'+d.counts.users+'</b><span>Users</span></div></div></div><div class="admin-tabs"><button class="active" data-atab="pending">⏳ Pending</button><button data-atab="jobs">💼 Jobs</button><button data-atab="freelancers">🧑‍💻 Freelancers</button><button data-atab="users">👥 Users</button></div><div id="adminContent"></div></div>';
+  const isSupreme = (Auth.user.email?.toLowerCase() === 'mukundram165250@gmail.com' || Auth.user.isSupremeAdmin === true);
+  const supremeBanner = isSupreme ? `
+    <div class="notice" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3;margin-bottom:20px;padding:16px 20px;border-radius:12px;display:flex;align-items:center;gap:14px;">
+      <i class="fa-solid fa-crown" style="color:#4f46e5;font-size:1.6rem"></i>
+      <div>
+        <h4 style="margin:0 0 3px;font-size:1rem;color:#312e81">Supreme Admin Mode Active</h4>
+        <p style="margin:0;font-size:.86rem;opacity:.9">You are authenticated as <b>Mukundram</b> (mukundram165250@gmail.com). You hold full system authority and can promote normal accounts into Admins or revoke admin access from the <b>Users</b> tab.</p>
+      </div>
+    </div>
+  ` : '';
+  return '<div class="page-head"><div class="container">'+supremeBanner+'<h1><i class="fa-solid fa-gauge-high" style="color:var(--primary)"></i> Admin Dashboard</h1><p>Moderate jobs, review freelancer profiles, and manage account permissions</p></div></div><div class="container" style="padding-bottom:64px"><div class="admin-stats"><div class="stat-card"><div class="ico"><i class="fa-solid fa-hourglass-half"></i></div><div><b>'+d.counts.pendingJobs+d.counts.pendingFreelancers+'</b><span>Pending Approval</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-briefcase"></i></div><div><b>'+d.counts.jobs+'</b><span>Total Jobs</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-users"></i></div><div><b>'+d.counts.freelancers+'</b><span>Freelancers</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-user-check"></i></div><div><b>'+d.counts.users+'</b><span>Users</span></div></div></div><div class="admin-tabs"><button class="active" data-atab="pending">⏳ Pending</button><button data-atab="jobs">💼 Jobs</button><button data-atab="freelancers">🧑‍💻 Freelancers</button><button data-atab="users">👥 Users</button></div><div id="adminContent"></div></div>';
 };
 
 Pages['job'] = async id => {
@@ -546,7 +556,86 @@ async function wire(route, parts) {
     const renderTab=async tab=>{const el=document.getElementById('adminContent');el.innerHTML='<div class="empty">Loading…</div>';try{
       if(tab==='pending'||tab==='freelancers'){const r=await api('/admin/freelancers?moderation='+ (tab==='pending'?'PENDING':'APPROVED') +'&limit=50');const rows=r.data.freelancers.map(x=>'<div class="admin-row"><div class="info"><h4>'+esc(x.user.displayName)+' '+badge(x.moderation,x.moderation==='APPROVED'?'badge-verified':'badge-new')+'</h4><p>'+esc(x.headline||'')+' · '+esc((x.skills||[]).join(', '))+'</p></div><div class="actions">'+(x.moderation!=='APPROVED'?'<button class="btn btn-green btn-sm" data-m="APPROVED" data-id="'+x.id+'">Approve</button>':'')+(x.moderation!=='REJECTED'?'<button class="btn btn-outline btn-sm" data-m="REJECTED" data-id="'+x.id+'">Reject</button>':'')+'</div></div>').join('');el.innerHTML='<div class="admin-table">'+(rows||'<div class="empty">None.</div>')+'</div>';el.querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{try{await api('/admin/freelancers/'+b.dataset.id+'/moderation',{method:'PATCH',body:JSON.stringify({moderation:b.dataset.m})});toast('Freelancer updated.');renderTab(tab);}catch(e){toast(e.message,'error');}});}
       else if(tab==='jobs'){const r=await api('/admin/jobs?moderation=PENDING&limit=50');const rows=r.data.jobs.map(x=>'<div class="admin-row"><div class="info"><h4>'+esc(x.title)+' '+badge(x.moderation,'badge-new')+'</h4><p>'+esc(x.category||'Other')+' · '+fmtLKR(x.budgetMin||x.budgetMax)+' · '+esc(x.client.displayName)+'</p><p>'+esc(x.description.slice(0,160))+'…</p></div><div class="actions"><button class="btn btn-green btn-sm" data-m="APPROVED" data-id="'+x.id+'">Approve</button><button class="btn btn-outline btn-sm" data-m="REJECTED" data-id="'+x.id+'">Reject</button></div></div>').join('');el.innerHTML='<div class="admin-table">'+(rows||'<div class="empty">No pending jobs.</div>')+'</div>';el.querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{try{await api('/admin/jobs/'+b.dataset.id+'/moderation',{method:'PATCH',body:JSON.stringify({moderation:b.dataset.m})});toast('Job moderation updated.');renderTab('jobs');}catch(e){toast(e.message,'error');}});}
-      else {const r=await api('/admin/users?limit=50');el.innerHTML='<div class="admin-table">'+r.data.users.map(u=>'<div class="admin-row"><div class="info"><h4>'+esc(u.displayName)+' '+badge(u.role,'badge-level')+'</h4><p>'+esc(u.email)+' · '+esc(u.location||'No location')+'</p></div></div>').join('')+'</div>';}
+      else {
+        const isSupreme = (Auth.user?.email?.toLowerCase() === 'mukundram165250@gmail.com' || Auth.user?.isSupremeAdmin === true);
+        const r = await api('/admin/users?limit=50');
+        const rows = (r.data?.users || []).map(u => {
+          const userIsSupreme = (u.email?.toLowerCase() === 'mukundram165250@gmail.com' || u.isSupremeAdmin);
+          let badgeHtml = '';
+          if (userIsSupreme) {
+            badgeHtml = '<span class="badge" style="background:#4338ca;color:#fff"><i class="fa-solid fa-crown"></i> Supreme Admin</span>';
+          } else if (u.role === 'ADMIN') {
+            badgeHtml = '<span class="badge badge-verified"><i class="fa-solid fa-shield"></i> Admin</span>';
+          } else {
+            badgeHtml = badge(u.role, 'badge-level');
+          }
+
+          let actionHtml = '';
+          if (isSupreme && !userIsSupreme) {
+            if (u.role !== 'ADMIN') {
+              actionHtml = `<button class="btn btn-primary btn-sm btn-role-change" data-id="${u.id}" data-email="${esc(u.email)}" data-name="${esc(u.displayName)}" data-role="ADMIN"><i class="fa-solid fa-shield-halved"></i> Make Admin</button>`;
+            } else {
+              actionHtml = `<button class="btn btn-outline btn-sm btn-role-change" data-id="${u.id}" data-email="${esc(u.email)}" data-name="${esc(u.displayName)}" data-role="FREELANCER" style="color:#b91c1c;border-color:#fca5a5"><i class="fa-solid fa-user-minus"></i> Remove Admin</button>`;
+            }
+          }
+
+          return `<div class="admin-row">
+            <div class="info">
+              <h4>${esc(u.displayName)} ${badgeHtml}</h4>
+              <p>${esc(u.email)} · ${esc(u.location || 'Jaffna')} · Registered: ${timeAgo(u.createdAt)}</p>
+            </div>
+            <div class="actions">
+              ${actionHtml}
+            </div>
+          </div>`;
+        }).join('');
+
+        el.innerHTML = '<div class="admin-table">' + (rows || '<div class="empty">No users found.</div>') + '</div>';
+
+        // Wire role change buttons for Supreme Admin
+        el.querySelectorAll('.btn-role-change').forEach(btn => {
+          btn.onclick = async () => {
+            const targetId = btn.dataset.id;
+            const targetEmail = btn.dataset.email;
+            const targetName = btn.dataset.name || targetEmail;
+            const newRole = btn.dataset.role;
+            const isPromote = newRole === 'ADMIN';
+
+            const confirmMsg = isPromote
+              ? `Are you sure you want to promote ${targetName} (${targetEmail}) to Admin? They will receive full moderation permissions.`
+              : `Revoke admin privileges from ${targetName} (${targetEmail})? Their account will be converted to Freelancer.`;
+
+            if (!confirm(confirmMsg)) return;
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> ${isPromote ? 'Promoting...' : 'Updating...'}`;
+
+            try {
+              if (isPromote) {
+                if (window.JFCAuth && window.JFCAuth.promoteToAdmin) {
+                  await window.JFCAuth.promoteToAdmin(targetId, targetEmail);
+                }
+              } else {
+                if (window.JFCAuth && window.JFCAuth.demoteFromAdmin) {
+                  await window.JFCAuth.demoteFromAdmin(targetId, newRole);
+                }
+              }
+
+              await api(`/admin/users/${encodeURIComponent(targetId)}/role`, {
+                method: 'PATCH',
+                body: JSON.stringify({ role: newRole })
+              });
+
+              toast(isPromote ? `👑 Promoted ${targetName} to Admin!` : `Admin privileges revoked for ${targetName}.`);
+              renderTab('users');
+            } catch (err) {
+              toast(err.message || 'Failed to update account role.', 'error');
+              btn.disabled = false;
+              btn.innerHTML = isPromote ? '<i class="fa-solid fa-shield-halved"></i> Make Admin' : '<i class="fa-solid fa-user-minus"></i> Remove Admin';
+            }
+          };
+        });
+      }
     }catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}};
     document.querySelectorAll('.admin-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.admin-tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderTab(b.dataset.atab);}); renderTab('pending');
   }
@@ -554,8 +643,17 @@ async function wire(route, parts) {
 
 function renderNav(){
   const el=document.getElementById('navAuth');
-  if(Auth.user) el.innerHTML='<span class="nav-user">'+(Auth.user.role==='ADMIN'?'<a href="#/admin" class="btn btn-ghost btn-sm"><i class="fa-solid fa-shield-halved"></i> Admin</a>':'')+'<span class="avatar-chip" title="'+esc(Auth.user.displayName)+'">'+esc(initials(Auth.user.displayName))+'</span><button class="btn btn-outline btn-sm" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i></button></span>';
-  else el.innerHTML='<a href="#/login" class="btn btn-primary btn-sm" style="margin-left:8px"><i class="fa-solid fa-right-to-bracket"></i> Login</a>';
+  if(Auth.user) {
+    const isSupreme = (Auth.user.email?.toLowerCase() === 'mukundram165250@gmail.com' || Auth.user.isSupremeAdmin === true);
+    const adminLink = Auth.user.role === 'ADMIN'
+      ? `<a href="#/admin" class="btn btn-ghost btn-sm" style="${isSupreme ? 'color:#4f46e5;font-weight:700' : ''}">
+          <i class="fa-solid ${isSupreme ? 'fa-crown' : 'fa-shield-halved'}" style="${isSupreme ? 'color:#eab308' : ''}"></i> ${isSupreme ? 'Supreme Admin' : 'Admin'}
+        </a>`
+      : '';
+    el.innerHTML='<span class="nav-user">'+adminLink+'<span class="avatar-chip" title="'+esc(Auth.user.displayName)+'">'+esc(initials(Auth.user.displayName))+'</span><button class="btn btn-outline btn-sm" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i></button></span>';
+  } else {
+    el.innerHTML='<a href="#/login" class="btn btn-primary btn-sm" style="margin-left:8px"><i class="fa-solid fa-right-to-bracket"></i> Login</a>';
+  }
   const out=document.getElementById('logoutBtn'); if(out)out.onclick=()=>Auth.logout();
 }
 

@@ -20,10 +20,20 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isSupremeAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "mukundram165250@gmail.com" ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.supreme == true)
+      );
+    }
+
     function isAdmin() {
       return isSignedIn() && (
+        isSupremeAdmin() ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == "mukundram165250@gmail.com"
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ADMIN")
       );
     }
 
@@ -35,10 +45,10 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // Admins collection
+    // Admins collection — Only Supreme Admin can promote or demote admins
     match /admins/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAdmin();
+      allow write: if isSupremeAdmin();
     }
 
     // Users collection
@@ -46,22 +56,31 @@ service cloud.firestore {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
 
-      // New users can only register as CLIENT or FREELANCER (never self-assign ADMIN)
+      // New users can register as CLIENT or FREELANCER (or Supreme Admin pre-assigned)
       allow create: if isOwner(userId)
         && isValidId(userId)
         && incoming().uid == userId
         && incoming().email is string
         && incoming().displayName is string
-        && (incoming().role == 'CLIENT' || incoming().role == 'FREELANCER')
-        && incoming().role != 'ADMIN';
+        && (
+          (incoming().role in ['CLIENT', 'FREELANCER']) ||
+          (isSupremeAdmin() && incoming().role == 'ADMIN')
+        );
 
-      // Users can update their own details, but cannot change their role or UID
+      // Users can update their own details, but cannot change their role, email, or UID.
+      // Standard Admins can update account statuses.
+      // ONLY Supreme Admin can change a user's role (promoting to or demoting from ADMIN).
       allow update: if (
         isOwner(userId)
         && !incoming().diff(existing()).affectedKeys().hasAny(['role', 'uid', 'email'])
-      ) || isAdmin();
+      ) || (
+        isAdmin() && (
+          !incoming().diff(existing()).affectedKeys().hasAny(['role']) ||
+          isSupremeAdmin()
+        )
+      );
 
-      allow delete: if isAdmin();
+      allow delete: if isSupremeAdmin();
     }
 
     // Freelancer Profiles

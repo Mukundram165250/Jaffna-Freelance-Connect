@@ -496,4 +496,52 @@ router.get("/applications", async (req, res, next) => {
   }
 });
 
+router.patch("/users/:id/role", async (req, res, next) => {
+  try {
+    const isSupreme = (
+      req.user.email?.toLowerCase() === "mukundram165250@gmail.com" ||
+      req.user.isSupremeAdmin === true
+    );
+
+    if (!isSupreme) {
+      return res.status(403).json({
+        success: false,
+        error: { message: "Only the Supreme Admin (mukundram165250@gmail.com) can change user roles." }
+      });
+    }
+
+    const role = parseRole(req.body.role);
+    if (!role) {
+      return res.status(400).json({
+        success: false,
+        error: { message: "Role must be CLIENT, FREELANCER, or ADMIN." }
+      });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        error: { message: "User not found." }
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { role },
+      select: adminUserSelect
+    });
+
+    return res.json({
+      success: true,
+      data: { user: updatedUser }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

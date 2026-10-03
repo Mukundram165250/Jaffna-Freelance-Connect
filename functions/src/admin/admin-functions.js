@@ -88,3 +88,50 @@ exports.getAdminStats = onCall(async (request) => {
     }
   };
 });
+
+/**
+ * Change a user's role (Exclusive to Supreme Admin mukundram165250@gmail.com)
+ */
+exports.setUserRole = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Authentication required.");
+  }
+  const callerEmail = request.auth.token.email?.toLowerCase();
+  const isSupreme = (callerEmail === "mukundram165250@gmail.com" || request.auth.token.supreme === true);
+  if (!isSupreme) {
+    throw new HttpsError("permission-denied", "Only Supreme Admin can change user roles.");
+  }
+
+  const targetUserId = sanitizeString(request.data.userId, 128);
+  const targetRole = sanitizeString(request.data.role, 20).toUpperCase();
+
+  if (!["CLIENT", "FREELANCER", "ADMIN"].includes(targetRole)) {
+    throw new HttpsError("invalid-argument", "Role must be CLIENT, FREELANCER, or ADMIN.");
+  }
+
+  const userRef = db.collection("users").doc(targetUserId);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) {
+    throw new HttpsError("not-found", "User not found.");
+  }
+
+  await userRef.update({
+    role: targetRole,
+    updatedAt: new Date().toISOString()
+  });
+
+  const adminRef = db.collection("admins").doc(targetUserId);
+  if (targetRole === "ADMIN") {
+    await adminRef.set({
+      uid: targetUserId,
+      email: userSnap.data().email || "",
+      grantedBy: callerEmail,
+      createdAt: new Date().toISOString()
+    }, { merge: true });
+  } else {
+    await adminRef.delete().catch(() => {});
+  }
+
+  return { success: true, message: `User role successfully updated to ${targetRole}.` };
+});
+

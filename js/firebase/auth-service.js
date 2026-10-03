@@ -20,6 +20,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
+  deleteDoc,
   getDocFromServer
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
@@ -67,9 +69,32 @@ async function fetchUserProfile(uid, fallbackEmail = "", fallbackDisplayName = "
       role = profileData.role || 'FREELANCER';
     }
 
-    // Check admin authority
-    if (fallbackEmail === 'mukundram165250@gmail.com' || fallbackEmail === 'admin@jaffnafreelance.lk') {
+    // Check admin authority & Supreme Admin designation
+    const isSupreme = (fallbackEmail?.toLowerCase() === 'mukundram165250@gmail.com');
+    if (isSupreme || fallbackEmail === 'admin@jaffnafreelance.lk') {
       role = 'ADMIN';
+      // Automatically register supreme admin in Firestore admins collection
+      if (isSupreme) {
+        setDoc(doc(db, 'admins', uid), {
+          uid,
+          email: fallbackEmail,
+          supreme: true,
+          grantedBy: 'SYSTEM_SUPREME',
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(() => {});
+
+        if (!snap.exists() || profileData?.role !== 'ADMIN') {
+          setDoc(userDocRef, {
+            uid,
+            email: fallbackEmail,
+            displayName: fallbackDisplayName || "Mukundram",
+            role: 'ADMIN',
+            isSupremeAdmin: true,
+            accountStatus: 'ACTIVE',
+            updatedAt: new Date().toISOString()
+          }, { merge: true }).catch(() => {});
+        }
+      }
     } else {
       try {
         const adminSnap = await getDoc(doc(db, 'admins', uid));
@@ -82,8 +107,9 @@ async function fetchUserProfile(uid, fallbackEmail = "", fallbackDisplayName = "
     return {
       uid,
       email: fallbackEmail || profileData?.email || "",
-      displayName: fallbackDisplayName || profileData?.displayName || "Jaffna Member",
+      displayName: fallbackDisplayName || profileData?.displayName || (isSupreme ? "Mukundram" : "Jaffna Member"),
       role,
+      isSupremeAdmin: isSupreme,
       accountStatus: profileData?.accountStatus || 'ACTIVE',
       createdAt: profileData?.createdAt || new Date().toISOString()
     };
@@ -93,11 +119,13 @@ async function fetchUserProfile(uid, fallbackEmail = "", fallbackDisplayName = "
     } else {
       console.error("Error fetching user profile:", err);
     }
+    const isSupreme = (fallbackEmail?.toLowerCase() === 'mukundram165250@gmail.com');
     return {
       uid,
       email: fallbackEmail,
-      displayName: fallbackDisplayName || "Jaffna Member",
-      role: (fallbackEmail === 'mukundram165250@gmail.com') ? 'ADMIN' : 'FREELANCER'
+      displayName: fallbackDisplayName || (isSupreme ? "Mukundram" : "Jaffna Member"),
+      role: (isSupreme || fallbackEmail === 'admin@jaffnafreelance.lk') ? 'ADMIN' : 'FREELANCER',
+      isSupremeAdmin: isSupreme
     };
   }
 }
@@ -214,6 +242,65 @@ const JFCAuth = {
 
   async sendPasswordResetEmail(email) {
     return this.forgotPassword(email);
+  },
+
+  isSupremeAdmin(user = this.currentUser) {
+    if (!user) return false;
+    return Boolean(
+      user.email?.toLowerCase() === 'mukundram165250@gmail.com' ||
+      user.isSupremeAdmin === true
+    );
+  },
+
+  async promoteToAdmin(targetUid, targetEmail = "") {
+    if (!this.isSupremeAdmin()) {
+      throw new Error("Permission denied: Only the Supreme Admin can promote users to Admin.");
+    }
+    // 1. Add to Firestore admins collection
+    await setDoc(doc(db, 'admins', targetUid), {
+      uid: targetUid,
+      email: targetEmail.toLowerCase(),
+      grantedBy: this.currentUser?.email || 'mukundram165250@gmail.com',
+      createdAt: new Date().toISOString()
+    }, { merge: true });
+
+    // 2. Update Firestore user role
+    await updateDoc(doc(db, 'users', targetUid), {
+      role: 'ADMIN',
+      updatedAt: new Date().toISOString()
+    }).catch(console.warn);
+
+    // 3. Sync with backend API
+    if (typeof window !== 'undefined' && window.api) {
+      await window.api(`/admin/users/${encodeURIComponent(targetUid)}/role`, {
+        method: 'PATCH',
+        body: { role: 'ADMIN' }
+      }).catch(console.warn);
+    }
+    return true;
+  },
+
+  async demoteFromAdmin(targetUid, newRole = 'FREELANCER') {
+    if (!this.isSupremeAdmin()) {
+      throw new Error("Permission denied: Only the Supreme Admin can revoke Admin access.");
+    }
+    // 1. Remove from Firestore admins collection
+    await deleteDoc(doc(db, 'admins', targetUid)).catch(console.warn);
+
+    // 2. Update Firestore user role
+    await updateDoc(doc(db, 'users', targetUid), {
+      role: newRole,
+      updatedAt: new Date().toISOString()
+    }).catch(console.warn);
+
+    // 3. Sync with backend API
+    if (typeof window !== 'undefined' && window.api) {
+      await window.api(`/admin/users/${encodeURIComponent(targetUid)}/role`, {
+        method: 'PATCH',
+        body: { role: newRole }
+      }).catch(console.warn);
+    }
+    return true;
   },
 
   async logout() {

