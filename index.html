@@ -32,8 +32,101 @@
 <!-- ======= TOAST ======= -->
 <div id="toast" class="toast"></div>
 
-<!-- ======= PAGES ======= -->
-<main id="app"></main>
+<!-- ======= PAGES / AUTH CONTAINER ======= -->
+<main id="app">
+  <div class="container fade-in">
+    <div class="auth-wrap">
+      <div class="auth-header">
+        <span class="auth-badge">🌴 Jaffna Freelance Connect</span>
+        <h2 id="authHeading">Welcome Back 👋</h2>
+        <p id="authSubheading" class="sub">Sign in or create your account to connect with Jaffna's top opportunities</p>
+      </div>
+
+      <div class="auth-tabs" role="tablist" aria-label="Authentication tabs">
+        <button type="button" class="active" id="tabLoginBtn" data-tab="login" role="tab" aria-selected="true" aria-controls="loginForm">
+          <i class="fa-solid fa-right-to-bracket"></i> Login
+        </button>
+        <button type="button" id="tabRegisterBtn" data-tab="register" role="tab" aria-selected="false" aria-controls="registerForm">
+          <i class="fa-solid fa-user-plus"></i> Register
+        </button>
+      </div>
+
+      <div id="authAlert" class="auth-alert" style="display:none;" role="alert"></div>
+
+      <!-- ======= LOGIN FORM ======= -->
+      <form id="loginForm" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="loginEmailInput"><i class="fa-solid fa-envelope"></i> Email Address</label>
+          <input id="loginEmailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <div class="label-row">
+            <label for="loginPasswordInput"><i class="fa-solid fa-lock"></i> Password</label>
+            <a href="javascript:void(0)" class="forgot-link" id="btnForgotPass">Forgot password?</a>
+          </div>
+          <div class="password-input-wrap">
+            <input id="loginPasswordInput" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+            <button type="button" class="btn-toggle-pwd" data-target="loginPasswordInput" aria-label="Toggle password visibility">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block">
+          <span class="btn-label"><i class="fa-solid fa-right-to-bracket"></i> Sign In</span>
+        </button>
+
+        <div class="auth-divider"><span>or continue with</span></div>
+
+        <button type="button" id="btnGoogleAuth" class="btn btn-block btn-google">
+          <i class="fa-brands fa-google"></i> Continue with Google
+        </button>
+      </form>
+
+      <!-- ======= REGISTRATION FORM ======= -->
+      <form id="registerForm" class="auth-form" style="display:none;" novalidate>
+        <div class="form-group">
+          <label for="regNameInput"><i class="fa-solid fa-user"></i> Full Name</label>
+          <input id="regNameInput" name="displayName" type="text" autocomplete="name" placeholder="Kaviya Sivakumar" maxlength="100" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regEmailInput"><i class="fa-solid fa-envelope"></i> Email Address</label>
+          <input id="regEmailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regPasswordInput"><i class="fa-solid fa-lock"></i> Password (min 8 chars)</label>
+          <div class="password-input-wrap">
+            <input id="regPasswordInput" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="••••••••" required>
+            <button type="button" class="btn-toggle-pwd" data-target="regPasswordInput" aria-label="Toggle password visibility">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regRoleSelect"><i class="fa-solid fa-briefcase"></i> Account Type</label>
+          <select id="regRoleSelect" name="role" required>
+            <option value="FREELANCER" selected>Freelancer — I offer skills and services</option>
+            <option value="CLIENT">Client — I want to hire talent and post jobs</option>
+          </select>
+        </div>
+
+        <button type="submit" id="btnRegisterSubmit" class="btn btn-primary btn-block">
+          <span class="btn-label"><i class="fa-solid fa-user-plus"></i> Create Free Account</span>
+        </button>
+
+        <div class="auth-divider"><span>or sign up with</span></div>
+
+        <button type="button" id="btnGoogleRegister" class="btn btn-block btn-google">
+          <i class="fa-brands fa-google"></i> Sign Up with Google
+        </button>
+      </form>
+    </div>
+  </div>
+</main>
 
 <!-- ======= FOOTER ======= -->
 <footer class="footer">
@@ -63,6 +156,10 @@
   <div class="footer-bottom">© 2026 Jaffna Freelance Connect · Built with ❤️ in Jaffna</div>
 </footer>
 
+<!-- ======= SCRIPTS ======= -->
+<script src="js/firebase/firebase-config.js"></script>
+<script src="js/firebase/firestore-errors.js"></script>
+<script type="module" src="js/firebase/auth-service.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

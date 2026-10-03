@@ -12,9 +12,15 @@ const timeAgo = ts => {
 const CATS = ['Graphic Design','Web Development','Typing / Data Entry','Tutoring','Photography','Video Editing','Translation','Marketing','Handyman / Repair','Other'];
 
 async function api(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  try {
+    const token = window.JFCAuth?.auth?.currentUser ? await window.JFCAuth.auth.currentUser.getIdToken().catch(() => null) : null;
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+  } catch (e) {}
+
   const res = await fetch(API_BASE + path, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers,
     ...options
   });
   const body = await res.json().catch(() => ({}));
@@ -25,24 +31,62 @@ async function api(path, options = {}) {
 const Auth = {
   user: null,
   async load() {
+    if (window.JFCAuth?.isInitialized) {
+      this.user = window.JFCAuth.currentUser;
+      renderNav();
+      return this.user;
+    }
     try { this.user = (await api('/auth/me')).data.user; }
-    catch { this.user = null; }
+    catch { this.user = window.JFCAuth?.currentUser || null; }
     renderNav();
     return this.user;
   },
   async login(email, password) {
+    if (window.JFCAuth) {
+      this.user = await window.JFCAuth.login(email, password);
+      renderNav();
+      return this.user;
+    }
     const r = await api('/auth/login', { method:'POST', body:JSON.stringify({email,password}) });
     this.user = r.data.user; renderNav(); return this.user;
   },
   async register(displayName, email, password, role) {
+    if (window.JFCAuth) {
+      this.user = await window.JFCAuth.register(displayName, email, password, role);
+      renderNav();
+      return this.user;
+    }
     const r = await api('/auth/register', { method:'POST', body:JSON.stringify({displayName,email,password,role}) });
     this.user = r.data.user; renderNav(); return this.user;
   },
+  async loginWithGoogle() {
+    if (window.JFCAuth) {
+      this.user = await window.JFCAuth.loginWithGoogle();
+      renderNav();
+      return this.user;
+    }
+    throw new Error('Google Sign-In requires Firebase configuration.');
+  },
   async logout() {
+    if (window.JFCAuth) {
+      await window.JFCAuth.logout().catch(console.warn);
+    }
     await api('/auth/logout', {method:'POST'}).catch(()=>{});
     this.user = null; renderNav(); go('/');
   }
 };
+
+// Wire Firebase Auth state changes
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => {
+    if (window.JFCAuth) {
+      window.JFCAuth.onAuthChanged((u) => {
+        Auth.user = u;
+        renderNav();
+      });
+    }
+  });
+}
 
 function toast(msg, type='success') {
   const t = document.getElementById('toast');
@@ -93,8 +137,114 @@ Pages['offer-service'] = () => {
 };
 
 Pages.login = () => {
-  if (Auth.user) return '<div class="container"><div class="auth-wrap" style="text-align:center"><h2>You are already logged in.</h2><a href="#/" class="btn btn-primary btn-block">Go Home</a></div></div>';
-  return '<div class="container"><div class="auth-wrap"><h2>Welcome 👋</h2><p class="sub">Login or create your free account</p><div class="auth-tabs"><button class="active" data-tab="login">Login</button><button data-tab="register">Register</button></div><form id="loginForm"><div class="form-group"><label>Email</label><input name="email" type="email" required></div><div class="form-group"><label>Password</label><input name="password" type="password" required></div><button class="btn btn-primary btn-block">Login</button></form><form id="registerForm" style="display:none"><div class="form-group"><label>Full Name</label><input name="displayName" required maxlength="100"></div><div class="form-group"><label>Email</label><input name="email" type="email" required></div><div class="form-group"><label>Password</label><input name="password" type="password" minlength="8" required></div><div class="form-group"><label>Account Type</label><select name="role"><option value="FREELANCER">Freelancer — I offer skills</option><option value="CLIENT">Client — I need workers</option></select></div><button class="btn btn-primary btn-block">Create Free Account</button></form></div></div>';
+  if (Auth.user) {
+    return `
+      <div class="container fade-in">
+        <div class="auth-wrap" style="text-align:center">
+          <span class="auth-badge">🌴 Jaffna Freelance Connect</span>
+          <h2>You are logged in 👋</h2>
+          <p class="sub">Active account: <b>${esc(Auth.user.displayName || Auth.user.email)}</b> (${esc(Auth.user.role)})</p>
+          <a href="#/" class="btn btn-primary btn-block"><i class="fa-solid fa-house"></i> Go to Marketplace</a>
+          <button id="logoutBtnAlt" class="btn btn-outline btn-block" style="margin-top:12px"><i class="fa-solid fa-right-from-bracket"></i> Sign Out</button>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="container fade-in">
+      <div class="auth-wrap">
+        <div class="auth-header">
+          <span class="auth-badge">🌴 Jaffna Freelance Connect</span>
+          <h2 id="authHeading">Welcome Back 👋</h2>
+          <p id="authSubheading" class="sub">Sign in or create your account to connect with Jaffna's top opportunities</p>
+        </div>
+
+        <div class="auth-tabs" role="tablist" aria-label="Authentication tabs">
+          <button type="button" class="active" id="tabLoginBtn" data-tab="login" role="tab" aria-selected="true">
+            <i class="fa-solid fa-right-to-bracket"></i> Login
+          </button>
+          <button type="button" id="tabRegisterBtn" data-tab="register" role="tab" aria-selected="false">
+            <i class="fa-solid fa-user-plus"></i> Register
+          </button>
+        </div>
+
+        <div id="authAlert" class="auth-alert" style="display:none;" role="alert"></div>
+
+        <!-- LOGIN FORM -->
+        <form id="loginForm" class="auth-form" novalidate>
+          <div class="form-group">
+            <label for="loginEmailInput"><i class="fa-solid fa-envelope"></i> Email Address</label>
+            <input id="loginEmailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+          </div>
+
+          <div class="form-group">
+            <div class="label-row">
+              <label for="loginPasswordInput"><i class="fa-solid fa-lock"></i> Password</label>
+              <a href="javascript:void(0)" class="forgot-link" id="btnForgotPass">Forgot password?</a>
+            </div>
+            <div class="password-input-wrap">
+              <input id="loginPasswordInput" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+              <button type="button" class="btn-toggle-pwd" data-target="loginPasswordInput" aria-label="Toggle password visibility">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block">
+            <span class="btn-label"><i class="fa-solid fa-right-to-bracket"></i> Sign In</span>
+          </button>
+
+          <div class="auth-divider"><span>or continue with</span></div>
+
+          <button type="button" id="btnGoogleAuth" class="btn btn-block btn-google">
+            <i class="fa-brands fa-google"></i> Continue with Google
+          </button>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form id="registerForm" class="auth-form" style="display:none;" novalidate>
+          <div class="form-group">
+            <label for="regNameInput"><i class="fa-solid fa-user"></i> Full Name</label>
+            <input id="regNameInput" name="displayName" type="text" autocomplete="name" placeholder="Kaviya Sivakumar" maxlength="100" required>
+          </div>
+
+          <div class="form-group">
+            <label for="regEmailInput"><i class="fa-solid fa-envelope"></i> Email Address</label>
+            <input id="regEmailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="regPasswordInput"><i class="fa-solid fa-lock"></i> Password (min 8 chars)</label>
+            <div class="password-input-wrap">
+              <input id="regPasswordInput" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="••••••••" required>
+              <button type="button" class="btn-toggle-pwd" data-target="regPasswordInput" aria-label="Toggle password visibility">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="regRoleSelect"><i class="fa-solid fa-briefcase"></i> Account Type</label>
+            <select id="regRoleSelect" name="role" required>
+              <option value="FREELANCER" selected>Freelancer — I offer skills and services</option>
+              <option value="CLIENT">Client — I want to hire talent and post jobs</option>
+            </select>
+          </div>
+
+          <button type="submit" id="btnRegisterSubmit" class="btn btn-primary btn-block">
+            <span class="btn-label"><i class="fa-solid fa-user-plus"></i> Create Free Account</span>
+          </button>
+
+          <div class="auth-divider"><span>or sign up with</span></div>
+
+          <button type="button" id="btnGoogleRegister" class="btn btn-block btn-google">
+            <i class="fa-brands fa-google"></i> Sign Up with Google
+          </button>
+        </form>
+      </div>
+    </div>
+  `;
 };
 
 Pages.admin = async () => {
@@ -134,9 +284,178 @@ async function wire(route, parts) {
   const af=document.getElementById('applyForm');
   if(af) af.onsubmit=async e=>{e.preventDefault();const f=new FormData(af);try{await api('/applications',{method:'POST',body:JSON.stringify({jobId:parts[1],coverMessage:f.get('coverMessage')})});toast('Application submitted! 🎉');af.remove();}catch(e){toast(e.message,'error');}};
   if(route==='login'){
-    document.querySelectorAll('.auth-tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.auth-tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.getElementById('loginForm').style.display=b.dataset.tab==='login'?'':'none';document.getElementById('registerForm').style.display=b.dataset.tab==='register'?'':'none';});
-    const lf=document.getElementById('loginForm'); if(lf)lf.onsubmit=async e=>{e.preventDefault();const f=new FormData(lf);try{const u=await Auth.login(f.get('email'),f.get('password'));toast('Welcome back, '+u.displayName+'! 👋');go(u.role==='ADMIN'?'/admin':'/');}catch(e){toast(e.message,'error');}};
-    const rf=document.getElementById('registerForm'); if(rf)rf.onsubmit=async e=>{e.preventDefault();const f=new FormData(rf);try{const u=await Auth.register(f.get('displayName'),f.get('email'),f.get('password'),f.get('role'));toast('Welcome to Jaffna Freelance Connect, '+u.displayName+'! 🎉');go('/');}catch(e){toast(e.message,'error');}};
+    const alertBox = document.getElementById('authAlert');
+    const showAlert = (msg, type = 'error') => {
+      if (!alertBox) return;
+      alertBox.className = 'auth-alert ' + type;
+      alertBox.innerHTML = '<i class="fa-solid ' + (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check') + '"></i> ' + esc(msg);
+      alertBox.style.display = 'flex';
+    };
+    const hideAlert = () => { if (alertBox) alertBox.style.display = 'none'; };
+
+    // Tabs
+    const tabLogin = document.getElementById('tabLoginBtn') || document.querySelector('.auth-tabs button[data-tab="login"]');
+    const tabRegister = document.getElementById('tabRegisterBtn') || document.querySelector('.auth-tabs button[data-tab="register"]');
+    const lf = document.getElementById('loginForm');
+    const rf = document.getElementById('registerForm');
+    const heading = document.getElementById('authHeading');
+    const subhead = document.getElementById('authSubheading');
+
+    const switchTab = (tab) => {
+      hideAlert();
+      if (tab === 'login') {
+        tabLogin?.classList.add('active');
+        tabRegister?.classList.remove('active');
+        if (lf) lf.style.display = '';
+        if (rf) rf.style.display = 'none';
+        if (heading) heading.textContent = 'Welcome Back 👋';
+        if (subhead) subhead.textContent = 'Sign in or create your account to connect with Jaffna\'s top opportunities';
+      } else {
+        tabRegister?.classList.add('active');
+        tabLogin?.classList.remove('active');
+        if (lf) lf.style.display = 'none';
+        if (rf) rf.style.display = '';
+        if (heading) heading.textContent = 'Join Jaffna Freelance 🚀';
+        if (subhead) subhead.textContent = 'Create your account to showcase skills or hire verified local talent';
+      }
+    };
+
+    if (tabLogin) tabLogin.onclick = () => switchTab('login');
+    if (tabRegister) tabRegister.onclick = () => switchTab('register');
+
+    // Password visibility toggles
+    document.querySelectorAll('.btn-toggle-pwd').forEach(btn => {
+      btn.onclick = () => {
+        const inputId = btn.dataset.target;
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const isPwd = input.type === 'password';
+        input.type = isPwd ? 'text' : 'password';
+        btn.innerHTML = `<i class="fa-solid fa-eye${isPwd ? '-slash' : ''}"></i>`;
+      };
+    });
+
+    // Forgot password
+    const btnForgot = document.getElementById('btnForgotPass');
+    if (btnForgot) {
+      btnForgot.onclick = async () => {
+        const email = document.getElementById('loginEmailInput')?.value.trim();
+        if (!email) {
+          showAlert('Please type your email address above first, then click Forgot password.');
+          return;
+        }
+        try {
+          if (window.JFCAuth) {
+            await window.JFCAuth.forgotPassword(email);
+            showAlert('Password reset link sent to ' + email + '. Check your inbox!', 'success');
+          } else {
+            showAlert('Password reset is enabled via Firebase Authentication.');
+          }
+        } catch (err) {
+          showAlert(err.message);
+        }
+      };
+    }
+
+    // Google Sign In / Up
+    const onGoogleClick = async () => {
+      hideAlert();
+      try {
+        const u = await Auth.loginWithGoogle();
+        toast('Welcome, ' + (u.displayName || 'friend') + '! 🎉');
+        go(u.role === 'ADMIN' ? '/admin' : '/');
+      } catch (err) {
+        showAlert(err.message || 'Google sign-in was cancelled or failed.');
+      }
+    };
+    const gBtn1 = document.getElementById('btnGoogleAuth');
+    const gBtn2 = document.getElementById('btnGoogleRegister');
+    if (gBtn1) gBtn1.onclick = onGoogleClick;
+    if (gBtn2) gBtn2.onclick = onGoogleClick;
+
+    // Login Form Submit
+    if (lf) {
+      lf.onsubmit = async e => {
+        e.preventDefault();
+        hideAlert();
+        const f = new FormData(lf);
+        const email = f.get('email')?.trim();
+        const password = f.get('password');
+        const submitBtn = document.getElementById('btnLoginSubmit');
+        const origHTML = submitBtn?.innerHTML;
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Signing in...';
+        }
+
+        try {
+          const u = await Auth.login(email, password);
+          toast('Welcome back, ' + (u.displayName || 'friend') + '! 👋');
+          go(u.role === 'ADMIN' ? '/admin' : '/');
+        } catch (err) {
+          let msg = err.message || 'Login failed.';
+          if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password') || msg.includes('auth/user-not-found')) {
+            msg = 'Invalid email or password. Please check your credentials or register.';
+          } else if (msg.includes('auth/too-many-requests')) {
+            msg = 'Too many attempts. Access temporarily restricted. Please try again later.';
+          }
+          showAlert(msg);
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHTML;
+          }
+        }
+      };
+    }
+
+    // Register Form Submit
+    if (rf) {
+      rf.onsubmit = async e => {
+        e.preventDefault();
+        hideAlert();
+        const f = new FormData(rf);
+        const displayName = f.get('displayName')?.trim();
+        const email = f.get('email')?.trim();
+        const password = f.get('password');
+        const role = f.get('role');
+        const submitBtn = document.getElementById('btnRegisterSubmit');
+        const origHTML = submitBtn?.innerHTML;
+
+        if (!password || password.length < 8) {
+          showAlert('Password must be at least 8 characters.');
+          return;
+        }
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Creating account...';
+        }
+
+        try {
+          const u = await Auth.register(displayName, email, password, role);
+          toast('Welcome to Jaffna Freelance Connect, ' + u.displayName + '! 🎉');
+          go('/');
+        } catch (err) {
+          let msg = err.message || 'Registration failed.';
+          if (msg.includes('auth/email-already-in-use')) {
+            msg = 'This email is already registered. Please sign in instead.';
+          } else if (msg.includes('auth/weak-password')) {
+            msg = 'Password is too weak. Please use at least 8 characters.';
+          }
+          showAlert(msg);
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origHTML;
+          }
+        }
+      };
+    }
+
+    const logoutAlt = document.getElementById('logoutBtnAlt');
+    if (logoutAlt) logoutAlt.onclick = () => Auth.logout();
   }
   if(route==='admin' && Auth.user?.role==='ADMIN') {
     const renderTab=async tab=>{const el=document.getElementById('adminContent');el.innerHTML='<div class="empty">Loading…</div>';try{
