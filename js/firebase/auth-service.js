@@ -9,6 +9,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   signOut,
   signInWithPopup,
   GoogleAuthProvider,
@@ -110,6 +111,7 @@ async function fetchUserProfile(uid, fallbackEmail = "", fallbackDisplayName = "
       displayName: fallbackDisplayName || profileData?.displayName || (isSupreme ? "Mukundram" : "Jaffna Member"),
       role,
       isSupremeAdmin: isSupreme,
+      emailVerified: Boolean(auth.currentUser?.emailVerified),
       accountStatus: profileData?.accountStatus || 'ACTIVE',
       createdAt: profileData?.createdAt || new Date().toISOString()
     };
@@ -125,7 +127,8 @@ async function fetchUserProfile(uid, fallbackEmail = "", fallbackDisplayName = "
       email: fallbackEmail,
       displayName: fallbackDisplayName || (isSupreme ? "Mukundram" : "Jaffna Member"),
       role: (isSupreme || fallbackEmail === 'admin@jaffnafreelance.lk') ? 'ADMIN' : 'FREELANCER',
-      isSupremeAdmin: isSupreme
+      isSupremeAdmin: isSupreme,
+      emailVerified: Boolean(auth.currentUser?.emailVerified)
     };
   }
 }
@@ -198,6 +201,14 @@ const JFCAuth = {
       }
       throw err;
     }
+
+    // Automatically send email verification link to confirm user's email
+    try {
+      await sendEmailVerification(user);
+    } catch (verifErr) {
+      console.warn("Could not dispatch email verification immediately:", verifErr);
+    }
+
     this._notify(userData);
     return userData;
   },
@@ -242,6 +253,14 @@ const JFCAuth = {
 
   async sendPasswordResetEmail(email) {
     return this.forgotPassword(email);
+  },
+
+  async resendVerificationEmail() {
+    if (!auth.currentUser) {
+      throw new Error("No signed-in user found to verify.");
+    }
+    await sendEmailVerification(auth.currentUser);
+    return true;
   },
 
   isSupremeAdmin(user = this.currentUser) {

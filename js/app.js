@@ -56,7 +56,7 @@ const Auth = {
       renderNav();
       return this.user;
     }
-    const r = await api('/auth/register', { method:'POST', body:JSON.stringify({displayName,email,password,role}) });
+    const r = await api('/auth/register', { method:'POST', body:JSON.stringify({displayName,email,confirmEmail:email,password,role}) });
     this.user = r.data.user; renderNav(); return this.user;
   },
   async loginWithGoogle() {
@@ -233,6 +233,11 @@ Pages.login = () => {
           <div class="form-group">
             <label for="regEmailInput"><i class="fa-solid fa-envelope"></i> Email Address</label>
             <input id="regEmailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="regConfirmEmailInput"><i class="fa-solid fa-envelope-circle-check"></i> Confirm Email Address</label>
+            <input id="regConfirmEmailInput" name="confirmEmail" type="email" autocomplete="email" placeholder="Re-enter your email to confirm" required>
           </div>
 
           <div class="form-group">
@@ -513,10 +518,35 @@ async function wire(route, parts) {
         const f = new FormData(rf);
         const displayName = f.get('displayName')?.trim();
         const email = f.get('email')?.trim();
+        const confirmEmail = f.get('confirmEmail')?.trim();
         const password = f.get('password');
         const role = f.get('role');
         const submitBtn = document.getElementById('btnRegisterSubmit');
         const origHTML = submitBtn?.innerHTML;
+
+        if (!displayName) {
+          showAlert('Please enter your full name.');
+          document.getElementById('regNameInput')?.focus();
+          return;
+        }
+
+        if (!email || !email.includes('@')) {
+          showAlert('Please enter a valid email address.');
+          document.getElementById('regEmailInput')?.focus();
+          return;
+        }
+
+        if (!confirmEmail) {
+          showAlert('Please confirm your email address.');
+          document.getElementById('regConfirmEmailInput')?.focus();
+          return;
+        }
+
+        if (email.toLowerCase() !== confirmEmail.toLowerCase()) {
+          showAlert('Email addresses do not match. Please verify your confirmation email.');
+          document.getElementById('regConfirmEmailInput')?.focus();
+          return;
+        }
 
         if (!password || password.length < 8) {
           showAlert('Password must be at least 8 characters.');
@@ -525,12 +555,12 @@ async function wire(route, parts) {
 
         if (submitBtn) {
           submitBtn.disabled = true;
-          submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Creating account...';
+          submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Creating account & sending confirmation...';
         }
 
         try {
           const u = await Auth.register(displayName, email, password, role);
-          toast('Welcome to Jaffna Freelance Connect, ' + u.displayName + '! 🎉');
+          toast(`Account created! A confirmation email has been sent to ${email} ✉️`);
           go('/');
         } catch (err) {
           let msg = err.message || 'Registration failed.';
@@ -538,6 +568,8 @@ async function wire(route, parts) {
             msg = 'This email is already registered. Please sign in instead.';
           } else if (msg.includes('auth/weak-password')) {
             msg = 'Password is too weak. Please use at least 8 characters.';
+          } else if (msg.includes('auth/invalid-email')) {
+            msg = 'Please enter a valid email address.';
           }
           showAlert(msg);
         } finally {

@@ -44,6 +44,9 @@ function validateRegistration(body) {
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     return { error: "Please provide a valid email address." };
   }
+  if (body.confirmEmail !== undefined && email !== normalizeEmail(body.confirmEmail)) {
+    return { error: "Email addresses do not match. Please verify your confirmation email." };
+  }
   if (password.length < 8 || password.length > 128) {
     return { error: "Password must be between 8 and 128 characters." };
   }
