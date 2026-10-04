@@ -903,11 +903,12 @@ Pages.admin = async () => {
       <i class="fa-solid fa-crown" style="color:#4f46e5;font-size:1.6rem"></i>
       <div>
         <h4 style="margin:0 0 3px;font-size:1rem;color:#312e81">Supreme Admin Mode Active</h4>
-        <p style="margin:0;font-size:.86rem;opacity:.9">You are authenticated as <b>Mukundram</b> (mukundram165250@gmail.com). You hold full system authority and can promote normal accounts into Admins or revoke admin access from the <b>Users</b> tab.</p>
+        <p style="margin:0;font-size:.86rem;opacity:.9">You are authenticated as <b>Mukundram</b> (mukundram165250@gmail.com). You hold full system authority and can promote normal accounts into Admins or revoke admin access from the <b>Users</b> or <b>Supreme Console</b> tab.</p>
       </div>
     </div>
   ` : '';
-  return '<div class="page-head"><div class="container">'+supremeBanner+'<h1><i class="fa-solid fa-gauge-high" style="color:var(--primary)"></i> Admin Dashboard</h1><p>Moderate jobs, review freelancer profiles, and manage account permissions</p></div></div><div class="container" style="padding-bottom:64px"><div class="admin-stats"><div class="stat-card"><div class="ico"><i class="fa-solid fa-hourglass-half"></i></div><div><b>'+d.counts.pendingJobs+d.counts.pendingFreelancers+'</b><span>Pending Approval</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-briefcase"></i></div><div><b>'+d.counts.jobs+'</b><span>Total Jobs</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-users"></i></div><div><b>'+d.counts.freelancers+'</b><span>Freelancers</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-user-check"></i></div><div><b>'+d.counts.users+'</b><span>Users</span></div></div></div><div class="admin-tabs"><button class="active" data-atab="pending">⏳ Pending</button><button data-atab="jobs">💼 Jobs</button><button data-atab="freelancers">🧑‍💻 Freelancers</button><button data-atab="users">👥 Users</button></div><div id="adminContent"></div></div>';
+  const supremeTabBtn = isSupreme ? '<button data-atab="supreme" style="background:linear-gradient(135deg,#4f46e5,#9333ea);color:#fff;border-color:transparent"><i class="fa-solid fa-crown" style="color:#fbbf24"></i> Supreme Console</button>' : '';
+  return '<div class="page-head"><div class="container">'+supremeBanner+'<h1><i class="fa-solid fa-gauge-high" style="color:var(--primary)"></i> Admin Dashboard</h1><p>Moderate jobs, review freelancer profiles, and manage account permissions</p></div></div><div class="container" style="padding-bottom:64px"><div class="admin-stats"><div class="stat-card"><div class="ico"><i class="fa-solid fa-hourglass-half"></i></div><div><b>'+d.counts.pendingJobs+d.counts.pendingFreelancers+'</b><span>Pending Approval</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-briefcase"></i></div><div><b>'+d.counts.jobs+'</b><span>Total Jobs</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-users"></i></div><div><b>'+d.counts.freelancers+'</b><span>Freelancers</span></div></div><div class="stat-card"><div class="ico"><i class="fa-solid fa-user-check"></i></div><div><b>'+d.counts.users+'</b><span>Users</span></div></div></div><div class="admin-tabs"><button class="active" data-atab="pending">⏳ Pending</button><button data-atab="jobs">💼 Jobs</button><button data-atab="freelancers">🧑‍💻 Freelancers</button><button data-atab="users">👥 Users</button>'+supremeTabBtn+'</div><div id="adminContent"></div></div>';
 };
 
 Pages['job'] = async id => {
@@ -1485,7 +1486,105 @@ async function wire(route, parts) {
   if(route==='admin' && Auth.user?.role==='ADMIN') {
     const renderTab=async tab=>{const el=document.getElementById('adminContent');el.innerHTML='<div class="empty">Loading…</div>';try{
       if(tab==='pending'||tab==='freelancers'){const r=await api('/admin/freelancers?moderation='+ (tab==='pending'?'PENDING':'APPROVED') +'&limit=50');const rows=r.data.freelancers.map(x=>'<div class="admin-row"><div class="info"><h4>'+esc(x.user.displayName)+' '+badge(x.moderation,x.moderation==='APPROVED'?'badge-verified':'badge-new')+'</h4><p>'+esc(x.headline||'')+' · '+esc((x.skills||[]).join(', '))+'</p></div><div class="actions">'+(x.moderation!=='APPROVED'?'<button class="btn btn-green btn-sm" data-m="APPROVED" data-id="'+x.id+'">Approve</button>':'')+(x.moderation!=='REJECTED'?'<button class="btn btn-outline btn-sm" data-m="REJECTED" data-id="'+x.id+'">Reject</button>':'')+'</div></div>').join('');el.innerHTML='<div class="admin-table">'+(rows||'<div class="empty">None.</div>')+'</div>';el.querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{try{await api('/admin/freelancers/'+b.dataset.id+'/moderation',{method:'PATCH',body:JSON.stringify({moderation:b.dataset.m})});toast('Freelancer updated.');renderTab(tab);}catch(e){toast(e.message,'error');}});}
-      else if(tab==='jobs'){const r=await api('/admin/jobs?moderation=PENDING&limit=50');const rows=r.data.jobs.map(x=>'<div class="admin-row"><div class="info"><h4>'+esc(x.title)+' '+badge(x.moderation,'badge-new')+'</h4><p>'+esc(x.category||'Other')+' · '+fmtLKR(x.budgetMin||x.budgetMax)+' · '+esc(x.client.displayName)+'</p><p>'+esc(x.description.slice(0,160))+'…</p></div><div class="actions"><button class="btn btn-green btn-sm" data-m="APPROVED" data-id="'+x.id+'">Approve</button><button class="btn btn-outline btn-sm" data-m="REJECTED" data-id="'+x.id+'">Reject</button></div></div>').join('');el.innerHTML='<div class="admin-table">'+(rows||'<div class="empty">No pending jobs.</div>')+'</div>';el.querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{try{await api('/admin/jobs/'+b.dataset.id+'/moderation',{method:'PATCH',body:JSON.stringify({moderation:b.dataset.m})});toast('Job moderation updated.');renderTab('jobs');}catch(e){toast(e.message,'error');}});}
+      else if(tab==='jobs'){
+        const r=await api('/admin/jobs?moderation=PENDING&limit=50');
+        const rows=r.data.jobs.map(x=>{
+          const cur = x.currency || 'USD';
+          const budget = (x.budgetMin || x.budgetMax)
+            ? (x.budgetMin && x.budgetMax ? fmtCurrency(x.budgetMin, cur)+' – '+fmtCurrency(x.budgetMax, cur) : fmtCurrency(x.budgetMin || x.budgetMax, cur))
+            : 'Flexible';
+          return '<div class="admin-row"><div class="info"><h4>'+esc(x.title)+' '+badge(x.moderation,'badge-new')+'</h4><p>'+esc(x.category||'Other')+' · '+budget+' ('+cur+') · Client: '+esc(x.client?.displayName||'Client')+'</p><p>'+esc(x.description.slice(0,160))+'…</p></div><div class="actions"><button class="btn btn-green btn-sm" data-m="APPROVED" data-id="'+x.id+'">Approve</button><button class="btn btn-outline btn-sm" data-m="REJECTED" data-id="'+x.id+'">Reject</button></div></div>';
+        }).join('');
+        el.innerHTML='<div class="admin-table">'+(rows||'<div class="empty">No pending jobs.</div>')+'</div>';
+        el.querySelectorAll('[data-m]').forEach(b=>b.onclick=async()=>{
+          try{
+            await api('/admin/jobs/'+b.dataset.id+'/moderation',{method:'PATCH',body:JSON.stringify({moderation:b.dataset.m})});
+            toast('Job moderation updated.');
+            renderTab('jobs');
+          }catch(e){toast(e.message,'error');}
+        });
+      }
+      else if(tab==='supreme') {
+        const sys = (await api('/admin/system-status')).data;
+        const dash = (await api('/admin/dashboard')).data;
+        el.innerHTML = `
+          <div class="card" style="padding:28px;margin-bottom:24px;border:1.5px solid #818cf8;background:var(--card)">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:20px">
+              <div style="display:flex;align-items:center;gap:14px">
+                <div style="width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#4f46e5,#9333ea);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 4px 14px rgba(79,70,229,0.35)">
+                  <i class="fa-solid fa-crown" style="color:#fbbf24"></i>
+                </div>
+                <div>
+                  <h3 style="margin:0;font-size:1.25rem">Supreme Admin Executive Console</h3>
+                  <p style="margin:2px 0 0;font-size:0.86rem;color:var(--ink-3)">Creator & Supreme Authority: <b>${esc(sys.creator)}</b> (<a href="https://www.instagram.com/revolutionary_scout/" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline;">${esc(sys.instagram)}</a>)</p>
+                </div>
+              </div>
+              <span class="badge" style="background:#4338ca;color:#fff;padding:6px 14px;font-size:0.82rem"><i class="fa-solid fa-crown" style="color:#fbbf24"></i> Supreme Authority Active</span>
+            </div>
+
+            <div class="admin-stats" style="margin-bottom:24px">
+              <div class="stat-card">
+                <div class="ico" style="background:var(--primary-light);color:var(--primary)"><i class="fa-solid fa-server"></i></div>
+                <div><b>${esc(sys.version)}</b><span>Platform Engine</span></div>
+              </div>
+              <div class="stat-card">
+                <div class="ico" style="background:var(--green-light);color:var(--green)"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                <div><b>${Math.floor(sys.uptimeSeconds / 60)} min</b><span>Server Uptime</span></div>
+              </div>
+              <div class="stat-card">
+                <div class="ico" style="background:var(--accent-light);color:var(--accent)"><i class="fa-solid fa-database"></i></div>
+                <div><b>Active & Synced</b><span>Firestore Database</span></div>
+              </div>
+            </div>
+
+            <h4 style="margin-bottom:12px;font-size:1rem"><i class="fa-solid fa-bolt" style="color:var(--accent)"></i> Supreme Bulk Moderation Powers</h4>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
+              <button class="btn btn-green btn-sm" id="btnBulkApproveJobs" ${dash.counts.pendingJobs === 0 ? 'disabled' : ''}>
+                <i class="fa-solid fa-check-double"></i> Approve All Pending Jobs (${dash.counts.pendingJobs})
+              </button>
+              <button class="btn btn-primary btn-sm" id="btnBulkApproveFreelancers" ${dash.counts.pendingFreelancers === 0 ? 'disabled' : ''}>
+                <i class="fa-solid fa-user-check"></i> Approve All Pending Freelancers (${dash.counts.pendingFreelancers})
+              </button>
+            </div>
+
+            <div class="notice" style="background:var(--card-elevated);border:1px solid var(--border);color:var(--ink-2);margin:0;font-size:0.86rem">
+              <i class="fa-solid fa-shield-halved" style="color:var(--primary);font-size:1.1rem"></i>
+              <div>
+                <b>Heritage Context:</b> ${esc(sys.originHistory)}<br>
+                <b>Security Architecture:</b> All administrator promotions and security policies are cryptographically anchored to Mukundram (mukundram165250@gmail.com). Normal admins cannot promote or demote users.
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btnBulkApproveJobs')?.addEventListener('click', async () => {
+          if (!confirm(`Approve all ${dash.counts.pendingJobs} pending jobs?`)) return;
+          try {
+            const res = await api('/admin/bulk-moderate', {
+              method: 'POST',
+              body: JSON.stringify({ target: 'jobs', moderation: 'APPROVED' })
+            });
+            celebrate({ title: 'Jobs Approved! ⚡', sub: res.data?.message || 'All pending jobs approved.' });
+            renderTab('supreme');
+          } catch (e) {
+            toast(e.message, 'error');
+          }
+        });
+
+        document.getElementById('btnBulkApproveFreelancers')?.addEventListener('click', async () => {
+          if (!confirm(`Approve all ${dash.counts.pendingFreelancers} pending freelancers?`)) return;
+          try {
+            const res = await api('/admin/bulk-moderate', {
+              method: 'POST',
+              body: JSON.stringify({ target: 'freelancers', moderation: 'APPROVED' })
+            });
+            celebrate({ title: 'Freelancers Approved! 🧑‍💻', sub: res.data?.message || 'All pending freelancers approved.' });
+            renderTab('supreme');
+          } catch (e) {
+            toast(e.message, 'error');
+          }
+        });
+      }
       else {
         const isSupreme = (Auth.user?.email?.toLowerCase() === 'mukundram165250@gmail.com' || Auth.user?.isSupremeAdmin === true);
         const r = await api('/admin/users?limit=50');
@@ -1601,7 +1700,32 @@ async function route(){
 }
 function go(path){location.hash='#'+path;}
 
+function initTheme() {
+  const toggleBtn = document.getElementById('themeToggle');
+  function updateThemeUI() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (toggleBtn) {
+      toggleBtn.innerHTML = isDark
+        ? '<i class="fa-solid fa-sun" style="color:#fbbf24"></i>'
+        : '<i class="fa-solid fa-moon"></i>';
+      toggleBtn.setAttribute('title', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+      toggleBtn.setAttribute('aria-label', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+    }
+  }
+  updateThemeUI();
+  if (toggleBtn) {
+    toggleBtn.onclick = () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch (e) {}
+      updateThemeUI();
+    };
+  }
+}
+
 (async()=>{
+  initTheme();
   document.getElementById('navToggle').onclick=()=>document.getElementById('navLinks').classList.toggle('open');
   window.addEventListener('hashchange',route);
   if (typeof window !== 'undefined' && window.JFCAuthReady) {

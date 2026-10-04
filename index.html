@@ -14,6 +14,16 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<script>
+  (function() {
+    try {
+      const saved = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = saved || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) {}
+  })();
+</script>
 </head>
 <body>
 
@@ -21,7 +31,6 @@
 <nav class="navbar">
   <div class="container nav-inner">
     <a href="#/" class="brand"><span class="brand-icon">⚡</span> Vibe<span>Workers</span></a>
-    <button class="nav-toggle" id="navToggle" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
     <div class="nav-links" id="navLinks">
       <a href="#/" data-route="home">Home</a>
       <a href="#/jobs" data-route="jobs">Browse Jobs</a>
@@ -30,6 +39,12 @@
       <a href="#/offer-service" data-route="offer-service">Offer a Service</a>
       <a href="#/about" data-route="about">About</a>
       <span id="navAuth"></span>
+    </div>
+    <div class="nav-actions">
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme" title="Toggle dark/light mode">
+        <i class="fa-solid fa-moon"></i>
+      </button>
+      <button class="nav-toggle" id="navToggle" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
     </div>
   </div>
 </nav>

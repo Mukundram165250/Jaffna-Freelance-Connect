@@ -544,4 +544,70 @@ router.patch("/users/:id/role", async (req, res, next) => {
   }
 });
 
+router.get("/system-status", async (req, res, next) => {
+  try {
+    const isSupreme = (
+      req.user.email?.toLowerCase() === "mukundram165250@gmail.com" ||
+      req.user.isSupremeAdmin === true
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        platform: "VibeWorkers Global",
+        tagline: "Work Globally. Connect Freely.",
+        version: "1.2.0-global",
+        creator: "Mukundram",
+        instagram: "@revolutionary_scout",
+        originHistory: "VibeWorkers was originally started as Jaffna Freelance Connect by Mukundram.",
+        isSupremeCaller: isSupreme,
+        nodeVersion: process.version,
+        uptimeSeconds: Math.floor(process.uptime()),
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/bulk-moderate", async (req, res, next) => {
+  try {
+    const { target, moderation } = req.body;
+    if (!["jobs", "freelancers"].includes(target)) {
+      return res.status(400).json({ success: false, error: { message: "Target must be 'jobs' or 'freelancers'." } });
+    }
+    if (!["APPROVED", "REJECTED"].includes(moderation)) {
+      return res.status(400).json({ success: false, error: { message: "Moderation must be APPROVED or REJECTED." } });
+    }
+
+    let affected = 0;
+    if (target === "jobs") {
+      const result = await prisma.job.updateMany({
+        where: { moderation: "PENDING" },
+        data: { moderation }
+      });
+      affected = result.count;
+    } else {
+      const result = await prisma.freelancerProfile.updateMany({
+        where: { moderation: "PENDING" },
+        data: { moderation }
+      });
+      affected = result.count;
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        target,
+        moderation,
+        affectedCount: affected,
+        message: `Successfully set ${affected} pending ${target} to ${moderation}.`
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
