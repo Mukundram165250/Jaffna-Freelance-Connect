@@ -140,9 +140,127 @@ if (typeof window !== 'undefined') {
 
 function toast(msg, type='success') {
   const t = document.getElementById('toast');
+  if (!t) return;
   t.className = 'toast show ' + type;
   t.innerHTML = '<i class="fa-solid ' + (type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check') + '"></i> ' + esc(msg);
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+let _confettiActive = false;
+function triggerConfetti(duration = 3400) {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+  const canvas = document.getElementById('confettiCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  canvas.style.display = 'block';
+  ctx.scale(dpr, dpr);
+
+  const colors = ['#7c3aed', '#a855f7', '#ec4899', '#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#fbbf24', '#ffffff'];
+  const particleCount = Math.min(Math.floor(width / 14), 85);
+  const particles = [];
+
+  for (let i = 0; i < particleCount; i++) {
+    const isLeft = i % 2 === 0;
+    const originX = isLeft ? width * 0.18 : width * 0.82;
+    const originY = height * 0.92;
+    const angle = isLeft ? (Math.PI / 4) + (Math.random() * 0.35 - 0.17) : (3 * Math.PI / 4) + (Math.random() * 0.35 - 0.17);
+    const speed = 11 + Math.random() * 11;
+
+    particles.push({
+      x: originX,
+      y: originY,
+      vx: Math.cos(angle) * speed * (isLeft ? 1 : -1),
+      vy: -Math.abs(Math.sin(angle) * speed) - (2 + Math.random() * 4),
+      w: 6 + Math.random() * 7,
+      h: 4 + Math.random() * 9,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360,
+      rotationSpeed: (Math.random() - 0.5) * 8,
+      wobble: Math.random() * 10,
+      wobbleSpeed: 0.05 + Math.random() * 0.08,
+      opacity: 1,
+      shape: Math.random() > 0.35 ? 'rect' : 'circle',
+      gravity: 0.28 + Math.random() * 0.12
+    });
+  }
+
+  const startTime = Date.now();
+  _confettiActive = true;
+
+  function render() {
+    if (!_confettiActive) return;
+    const elapsed = Date.now() - startTime;
+    ctx.clearRect(0, 0, width, height);
+    let activeCount = 0;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.gravity;
+      p.vx *= 0.986;
+      p.rotation += p.rotationSpeed;
+      p.wobble += p.wobbleSpeed;
+
+      if (elapsed > duration * 0.55) {
+        p.opacity = Math.max(0, 1 - (elapsed - duration * 0.55) / (duration * 0.45));
+      }
+
+      if (p.opacity > 0 && p.y < height + 60) {
+        activeCount++;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.scale(Math.cos(p.wobble), 1);
+        ctx.globalAlpha = p.opacity;
+        ctx.fillStyle = p.color;
+
+        if (p.shape === 'rect') {
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    if (activeCount > 0 && elapsed < duration) {
+      requestAnimationFrame(render);
+    } else {
+      ctx.clearRect(0, 0, width, height);
+      canvas.style.display = 'none';
+      _confettiActive = false;
+    }
+  }
+
+  requestAnimationFrame(render);
+}
+
+function celebrate({ title, sub, icon = '🎉' }) {
+  triggerConfetti(3600);
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.className = 'toast show celebration';
+  t.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <div style="text-align:left">
+      <b style="font-size:0.95rem;display:block;line-height:1.25">${esc(title)}</b>
+      ${sub ? `<span style="font-size:0.83rem;opacity:0.92;font-weight:400;display:block;margin-top:2px">${esc(sub)}</span>` : ''}
+    </div>
+  `;
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 4400);
 }
 function loginRequired(action) {
   return '<div class="container"><div class="auth-wrap" style="text-align:center"><div style="font-size:2.6rem;margin-bottom:12px">🔒</div><h2>Login Required</h2><p class="sub">Please login or create a free account to ' + esc(action) + '.</p><a href="#/login" class="btn btn-primary btn-block">Login / Register</a></div></div>';
@@ -624,71 +742,6 @@ Pages.login = () => {
   `;
 };
 
-          <div class="form-group">
-            <label for="regConfirmEmailInput"><i class="fa-solid fa-envelope-circle-check"></i> Confirm Email Address</label>
-            <input id="regConfirmEmailInput" name="confirmEmail" type="email" autocomplete="email" placeholder="Re-enter your email to confirm" required>
-          </div>
-
-          <div class="form-group">
-            <label for="regPhoneInput"><i class="fa-solid fa-phone"></i> Phone Number</label>
-            <div style="display:flex;gap:8px">
-              <input id="regPhoneInput" name="phone" type="tel" autocomplete="tel" placeholder="+94 77 123 4567" required style="flex:1">
-              <button type="button" id="btnSendPhoneOtp" class="btn btn-outline" style="white-space:nowrap;padding:0 14px">
-                <i class="fa-solid fa-sms"></i> <span id="btnSendOtpText">Verify Phone</span>
-              </button>
-            </div>
-            <div id="phoneVerifiedBadge" style="display:none;align-items:center;gap:6px;color:#16a34a;font-weight:600;font-size:0.86rem;margin-top:6px">
-              <i class="fa-solid fa-circle-check"></i> Phone number verified
-            </div>
-          </div>
-
-          <div id="phoneOtpGroup" class="form-group" style="display:none;background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #cbd5e1;margin-bottom:16px;">
-            <div class="label-row" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <label for="regPhoneOtpInput" style="margin:0;font-weight:600;font-size:0.88rem"><i class="fa-solid fa-key"></i> Enter 6-Digit SMS Code</label>
-              <span id="phoneOtpTimer" style="font-size:0.8rem;color:#64748b"></span>
-            </div>
-            <div style="display:flex;gap:8px">
-              <input id="regPhoneOtpInput" type="text" maxlength="6" placeholder="123456" style="flex:1;letter-spacing:6px;font-size:1.15rem;font-weight:700;text-align:center">
-              <button type="button" id="btnConfirmPhoneOtp" class="btn btn-primary" style="white-space:nowrap;padding:0 16px">
-                <i class="fa-solid fa-check"></i> Confirm
-              </button>
-            </div>
-            <small id="phoneOtpHint" style="display:block;color:#64748b;margin-top:6px;font-size:0.82rem">Enter the 6-digit verification code sent to your phone (demo test code: <b style="color:var(--primary)">123456</b> or the code shown in toast).</small>
-          </div>
-
-          <div class="form-group">
-            <label for="regPasswordInput"><i class="fa-solid fa-lock"></i> Password (min 8 chars)</label>
-            <div class="password-input-wrap">
-              <input id="regPasswordInput" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="••••••••" required>
-              <button type="button" class="btn-toggle-pwd" data-target="regPasswordInput" aria-label="Toggle password visibility">
-                <i class="fa-solid fa-eye"></i>
-              </button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="regRoleSelect"><i class="fa-solid fa-briefcase"></i> Account Type</label>
-            <select id="regRoleSelect" name="role" required>
-              <option value="FREELANCER" selected>Freelancer — I offer skills and services</option>
-              <option value="CLIENT">Client — I want to hire talent and post jobs</option>
-            </select>
-          </div>
-
-          <button type="submit" id="btnRegisterSubmit" class="btn btn-primary btn-block">
-            <span class="btn-label"><i class="fa-solid fa-user-plus"></i> Create Free Account</span>
-          </button>
-
-          <div class="auth-divider"><span>or sign up with</span></div>
-
-          <button type="button" id="btnGoogleRegister" class="btn btn-block btn-google">
-            <i class="fa-brands fa-google"></i> Sign Up with Google
-          </button>
-        </form>
-      </div>
-    </div>
-  `;
-};
-
 Pages.about = () => `
   <div class="page-head">
     <div class="container">
@@ -943,7 +996,11 @@ async function wire(route, parts) {
             budgetMax: f.get('budgetMax') || null
           })
         });
-        toast('Global job submitted for review! 🎉');
+        celebrate({
+          title: 'Global Job Submitted! 🚀',
+          sub: 'Your listing is under review and will soon connect with international talent.',
+          icon: '⚡'
+        });
         go('/jobs');
       } catch (e) {
         toast(e.message, 'error');
@@ -969,7 +1026,11 @@ async function wire(route, parts) {
             availability: f.get('availability')
           })
         });
-        toast('Freelancer profile saved for review! 🎉');
+        celebrate({
+          title: 'Freelancer Profile Saved! ⭐',
+          sub: 'Your international profile is active and ready to attract clients.',
+          icon: '✨'
+        });
         go('/freelancers');
       } catch (e) {
         toast(e.message, 'error');
@@ -986,7 +1047,11 @@ async function wire(route, parts) {
           method: 'POST',
           body: JSON.stringify({ jobId: parts[1], coverMessage: f.get('coverMessage') })
         });
-        toast('Application submitted successfully! 🎉');
+        celebrate({
+          title: 'Application Sent Successfully! 🎯',
+          sub: 'The client will be notified of your proposal.',
+          icon: '📨'
+        });
         af.remove();
       } catch (e) {
         toast(e.message, 'error');
@@ -1173,7 +1238,16 @@ async function wire(route, parts) {
       hideAlert();
       try {
         const u = await Auth.loginWithGoogle();
-        toast('Welcome, ' + (u.displayName || 'friend') + '! 🎉');
+        const isRegistering = tabRegister?.classList.contains('active');
+        if (isRegistering) {
+          celebrate({
+            title: `Welcome to VibeWorkers, ${u.displayName || 'Friend'}! 🎉`,
+            sub: 'Your Google account is now connected and ready for global work.',
+            icon: '🚀'
+          });
+        } else {
+          toast('Welcome back, ' + (u.displayName || 'friend') + '! 👋');
+        }
         go(u.role === 'ADMIN' ? '/admin' : '/');
       } catch (err) {
         showAlert(err.message || 'Google sign-in was cancelled or failed.');
@@ -1378,8 +1452,13 @@ async function wire(route, parts) {
         }
 
         try {
-          const u = await Auth.register(displayName, email, password, role, phone);
-          toast(`Account created! A confirmation email has been sent to ${email} ✉️`);
+          const country = f.get('country') || 'GLOBAL';
+          const u = await Auth.register(displayName, email, password, role, phone, country);
+          celebrate({
+            title: 'Welcome to VibeWorkers! 🎉',
+            sub: `Account created! Please check ${email} for your confirmation link.`,
+            icon: '🚀'
+          });
           go('/');
         } catch (err) {
           let msg = err.message || 'Registration failed.';
