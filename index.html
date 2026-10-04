@@ -123,6 +123,33 @@
         </div>
 
         <div class="form-group">
+          <label for="regPhoneInput"><i class="fa-solid fa-phone"></i> Phone Number</label>
+          <div style="display:flex;gap:8px">
+            <input id="regPhoneInput" name="phone" type="tel" autocomplete="tel" placeholder="+94 77 123 4567" required style="flex:1">
+            <button type="button" id="btnSendPhoneOtp" class="btn btn-outline" style="white-space:nowrap;padding:0 14px">
+              <i class="fa-solid fa-sms"></i> <span id="btnSendOtpText">Verify Phone</span>
+            </button>
+          </div>
+          <div id="phoneVerifiedBadge" style="display:none;align-items:center;gap:6px;color:#16a34a;font-weight:600;font-size:0.86rem;margin-top:6px">
+            <i class="fa-solid fa-circle-check"></i> Phone number verified
+          </div>
+        </div>
+
+        <div id="phoneOtpGroup" class="form-group" style="display:none;background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #cbd5e1;margin-bottom:16px;">
+          <div class="label-row" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label for="regPhoneOtpInput" style="margin:0;font-weight:600;font-size:0.88rem"><i class="fa-solid fa-key"></i> Enter 6-Digit SMS Code</label>
+            <span id="phoneOtpTimer" style="font-size:0.8rem;color:#64748b"></span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <input id="regPhoneOtpInput" type="text" maxlength="6" placeholder="123456" style="flex:1;letter-spacing:6px;font-size:1.15rem;font-weight:700;text-align:center">
+            <button type="button" id="btnConfirmPhoneOtp" class="btn btn-primary" style="white-space:nowrap;padding:0 16px">
+              <i class="fa-solid fa-check"></i> Confirm
+            </button>
+          </div>
+          <small id="phoneOtpHint" style="display:block;color:#64748b;margin-top:6px;font-size:0.82rem">Enter the 6-digit verification code sent to your phone (demo test code: <b style="color:var(--primary)">123456</b> or the code shown in toast).</small>
+        </div>
+
+        <div class="form-group">
           <label for="regPasswordInput"><i class="fa-solid fa-lock"></i> Password (min 8 chars)</label>
           <div class="password-input-wrap">
             <input id="regPasswordInput" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="••••••••" required>

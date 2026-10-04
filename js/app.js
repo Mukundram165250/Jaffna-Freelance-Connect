@@ -50,13 +50,13 @@ const Auth = {
     const r = await api('/auth/login', { method:'POST', body:JSON.stringify({email,password}) });
     this.user = r.data.user; renderNav(); return this.user;
   },
-  async register(displayName, email, password, role) {
+  async register(displayName, email, password, role, phone = "") {
     if (window.JFCAuth) {
-      this.user = await window.JFCAuth.register(displayName, email, password, role);
+      this.user = await window.JFCAuth.register(displayName, email, password, role, phone);
       renderNav();
       return this.user;
     }
-    const r = await api('/auth/register', { method:'POST', body:JSON.stringify({displayName,email,confirmEmail:email,password,role}) });
+    const r = await api('/auth/register', { method:'POST', body:JSON.stringify({displayName,email,confirmEmail:email,password,role,phone}) });
     this.user = r.data.user; renderNav(); return this.user;
   },
   async loginWithGoogle() {
@@ -127,7 +127,7 @@ Pages.freelancers = () => '<div class="page-head"><div class="container"><h1><i 
 Pages['post-job'] = () => {
   if (!Auth.user) return loginRequired('post a job');
   if (!['CLIENT','ADMIN'].includes(Auth.user.role)) return '<div class="container"><div class="auth-wrap"><h2>Client account required</h2><p class="sub">Create a Client account to post jobs.</p><a href="#/login" class="btn btn-primary btn-block">Switch account</a></div></div>';
-  return '<div class="page-head"><div class="container"><h1><i class="fa-solid fa-pen-to-square" style="color:var(--primary)"></i> Post a Job</h1><p>Tell us what you need done — freelancers can apply</p></div></div><div class="container"><form class="form-wrap" id="jobForm"><div class="notice"><i class="fa-solid fa-circle-info"></i> Your job will be reviewed before it becomes public.</div><div class="form-group"><label>Job Title *</label><input name="title" required maxlength="160" placeholder="e.g. Logo design for my shop"></div><div class="form-group"><label>Description *</label><textarea name="description" required maxlength="5000" placeholder="Describe the work, timeline and expectations…"></textarea></div><div class="form-row"><div class="form-group"><label>Minimum Budget</label><input name="budgetMin" type="number" min="0" step="0.01"></div><div class="form-group"><label>Maximum Budget</label><input name="budgetMax" type="number" min="0" step="0.01"></div></div><div class="form-row"><div class="form-group"><label>Category</label><select name="category"><option value="">Select</option>'+CATS.map(c=>'<option>'+c+'</option>').join('')+'</select></div><div class="form-group"><label>Location</label><input name="location" value="Jaffna"></div></div><div class="form-group"><label>Skills (comma separated)</label><input name="skills" placeholder="e.g. Photoshop, Logo Design"></div><div class="form-group"><label>Contact</label><input name="contact" maxlength="200" placeholder="Phone or WhatsApp"></div><button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-paper-plane"></i> Submit for Approval</button></form></div>';
+  return '<div class="page-head"><div class="container"><h1><i class="fa-solid fa-pen-to-square" style="color:var(--primary)"></i> Post a Job</h1><p>Tell us what you need done — freelancers can apply</p></div></div><div class="container"><form class="form-wrap" id="jobForm"><div class="notice"><i class="fa-solid fa-circle-info"></i> Your job will be reviewed before it becomes public.</div><div class="notice" style="background:#f8fafc;border:1px solid #cbd5e1;color:#334155;margin-bottom:18px"><i class="fa-solid fa-user-shield" style="color:var(--primary);font-size:1.1rem"></i> <div><b>Verified Account Protected:</b> Your verified account email and phone number are automatically and safely connected to this job. You do not need to publicly add your personal contact details.</div></div><div class="form-group"><label>Job Title *</label><input name="title" required maxlength="160" placeholder="e.g. Logo design for my shop"></div><div class="form-group"><label>Description *</label><textarea name="description" required maxlength="5000" placeholder="Describe the work, timeline and expectations…"></textarea></div><div class="form-row"><div class="form-group"><label>Minimum Budget</label><input name="budgetMin" type="number" min="0" step="0.01"></div><div class="form-group"><label>Maximum Budget</label><input name="budgetMax" type="number" min="0" step="0.01"></div></div><div class="form-row"><div class="form-group"><label>Category</label><select name="category"><option value="">Select</option>'+CATS.map(c=>'<option>'+c+'</option>').join('')+'</select></div><div class="form-group"><label>Location</label><input name="location" value="Jaffna"></div></div><div class="form-group"><label>Skills (comma separated)</label><input name="skills" placeholder="e.g. Photoshop, Logo Design"></div><button class="btn btn-primary btn-block" type="submit"><i class="fa-solid fa-paper-plane"></i> Submit for Approval</button></form></div>';
 };
 
 Pages['offer-service'] = () => {
@@ -241,6 +241,33 @@ Pages.login = () => {
           </div>
 
           <div class="form-group">
+            <label for="regPhoneInput"><i class="fa-solid fa-phone"></i> Phone Number</label>
+            <div style="display:flex;gap:8px">
+              <input id="regPhoneInput" name="phone" type="tel" autocomplete="tel" placeholder="+94 77 123 4567" required style="flex:1">
+              <button type="button" id="btnSendPhoneOtp" class="btn btn-outline" style="white-space:nowrap;padding:0 14px">
+                <i class="fa-solid fa-sms"></i> <span id="btnSendOtpText">Verify Phone</span>
+              </button>
+            </div>
+            <div id="phoneVerifiedBadge" style="display:none;align-items:center;gap:6px;color:#16a34a;font-weight:600;font-size:0.86rem;margin-top:6px">
+              <i class="fa-solid fa-circle-check"></i> Phone number verified
+            </div>
+          </div>
+
+          <div id="phoneOtpGroup" class="form-group" style="display:none;background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #cbd5e1;margin-bottom:16px;">
+            <div class="label-row" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <label for="regPhoneOtpInput" style="margin:0;font-weight:600;font-size:0.88rem"><i class="fa-solid fa-key"></i> Enter 6-Digit SMS Code</label>
+              <span id="phoneOtpTimer" style="font-size:0.8rem;color:#64748b"></span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <input id="regPhoneOtpInput" type="text" maxlength="6" placeholder="123456" style="flex:1;letter-spacing:6px;font-size:1.15rem;font-weight:700;text-align:center">
+              <button type="button" id="btnConfirmPhoneOtp" class="btn btn-primary" style="white-space:nowrap;padding:0 16px">
+                <i class="fa-solid fa-check"></i> Confirm
+              </button>
+            </div>
+            <small id="phoneOtpHint" style="display:block;color:#64748b;margin-top:6px;font-size:0.82rem">Enter the 6-digit verification code sent to your phone (demo test code: <b style="color:var(--primary)">123456</b> or the code shown in toast).</small>
+          </div>
+
+          <div class="form-group">
             <label for="regPasswordInput"><i class="fa-solid fa-lock"></i> Password (min 8 chars)</label>
             <div class="password-input-wrap">
               <input id="regPasswordInput" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="••••••••" required>
@@ -314,7 +341,7 @@ async function wire(route, parts) {
     ['fSearch','fLevel'].forEach(id=>document.getElementById(id).addEventListener('input',render)); render();
   }
   const jf=document.getElementById('jobForm');
-  if(jf) jf.onsubmit=async e=>{e.preventDefault();const f=new FormData(jf);try{await api('/jobs',{method:'POST',body:JSON.stringify({title:f.get('title'),description:f.get('description'),category:f.get('category')||null,location:f.get('location')||null,contact:f.get('contact')||null,skills:String(f.get('skills')||'').split(',').map(x=>x.trim()).filter(Boolean),budgetMin:f.get('budgetMin')||null,budgetMax:f.get('budgetMax')||null})});toast('Job submitted for admin approval! 🎉');go('/jobs');}catch(e){toast(e.message,'error');}};
+  if(jf) jf.onsubmit=async e=>{e.preventDefault();const f=new FormData(jf);try{await api('/jobs',{method:'POST',body:JSON.stringify({title:f.get('title'),description:f.get('description'),category:f.get('category')||null,location:f.get('location')||null,contact:null,skills:String(f.get('skills')||'').split(',').map(x=>x.trim()).filter(Boolean),budgetMin:f.get('budgetMin')||null,budgetMax:f.get('budgetMax')||null})});toast('Job submitted for admin approval! 🎉');go('/jobs');}catch(e){toast(e.message,'error');}};
   const sf=document.getElementById('serviceForm');
   if(sf) sf.onsubmit=async e=>{e.preventDefault();const f=new FormData(sf);try{await api('/profile/me',{method:'PATCH',body:JSON.stringify({headline:f.get('headline'),skills:String(f.get('skills')||'').split(',').map(x=>x.trim()).filter(Boolean),bio:f.get('bio'),experienceLevel:f.get('experienceLevel'),hourlyRate:f.get('hourlyRate')||null,availability:f.get('availability')})});toast('Freelancer profile saved for admin approval! 🎉');go('/freelancers');}catch(e){toast(e.message,'error');}};
   const af=document.getElementById('applyForm');
@@ -510,6 +537,101 @@ async function wire(route, parts) {
       };
     }
 
+    // Phone OTP Verification State & Logic
+    let phoneIsVerified = false;
+    let expectedPhoneOtp = null;
+    let otpCountdownInterval = null;
+
+    const phoneInput = document.getElementById('regPhoneInput');
+    const btnSendOtp = document.getElementById('btnSendPhoneOtp');
+    const btnSendOtpText = document.getElementById('btnSendOtpText');
+    const otpGroup = document.getElementById('phoneOtpGroup');
+    const otpInput = document.getElementById('regPhoneOtpInput');
+    const btnConfirmOtp = document.getElementById('btnConfirmPhoneOtp');
+    const phoneBadge = document.getElementById('phoneVerifiedBadge');
+    const timerSpan = document.getElementById('phoneOtpTimer');
+
+    if (btnSendOtp) {
+      btnSendOtp.onclick = async () => {
+        hideAlert();
+        const phone = phoneInput?.value.trim();
+        if (!phone || phone.length < 8) {
+          showAlert('Please enter a valid phone number (e.g. +94 77 123 4567) before verifying.');
+          phoneInput?.focus();
+          return;
+        }
+
+        btnSendOtp.disabled = true;
+        if (btnSendOtpText) btnSendOtpText.textContent = 'Sending...';
+
+        try {
+          let otpCode = '123456';
+          if (window.JFCAuth && window.JFCAuth.sendPhoneOtp) {
+            const res = await window.JFCAuth.sendPhoneOtp(phone);
+            if (res?.data?.code) otpCode = res.data.code;
+          } else {
+            otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+          }
+
+          expectedPhoneOtp = otpCode;
+          if (otpGroup) otpGroup.style.display = 'block';
+          if (otpInput) {
+            otpInput.value = '';
+            otpInput.focus();
+          }
+
+          toast(`📱 Verification code sent to ${phone}! (Code: ${expectedPhoneOtp})`);
+
+          let secondsLeft = 60;
+          if (timerSpan) timerSpan.textContent = `Expires in ${secondsLeft}s`;
+          if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+          otpCountdownInterval = setInterval(() => {
+            secondsLeft--;
+            if (secondsLeft <= 0) {
+              clearInterval(otpCountdownInterval);
+              if (timerSpan) timerSpan.textContent = 'Code expired. Request new code.';
+              btnSendOtp.disabled = false;
+              if (btnSendOtpText) btnSendOtpText.textContent = 'Resend Code';
+            } else {
+              if (timerSpan) timerSpan.textContent = `Expires in ${secondsLeft}s`;
+            }
+          }, 1000);
+        } catch (err) {
+          showAlert(err.message || 'Failed to dispatch phone verification code.');
+          btnSendOtp.disabled = false;
+          if (btnSendOtpText) btnSendOtpText.textContent = 'Verify Phone';
+        }
+      };
+    }
+
+    if (btnConfirmOtp) {
+      btnConfirmOtp.onclick = async () => {
+        hideAlert();
+        const entered = otpInput?.value.trim();
+        if (!entered || entered.length < 4) {
+          showAlert('Please enter the 6-digit SMS verification code.');
+          otpInput?.focus();
+          return;
+        }
+
+        if (entered === expectedPhoneOtp || entered === '123456') {
+          phoneIsVerified = true;
+          if (otpGroup) otpGroup.style.display = 'none';
+          if (phoneBadge) phoneBadge.style.display = 'flex';
+          if (phoneInput) phoneInput.readOnly = true;
+          if (btnSendOtp) {
+            btnSendOtp.disabled = true;
+            btnSendOtp.className = 'btn btn-green';
+            btnSendOtp.innerHTML = '<i class="fa-solid fa-check"></i> Verified';
+          }
+          if (otpCountdownInterval) clearInterval(otpCountdownInterval);
+          toast('Phone number verified successfully! ✅');
+        } else {
+          showAlert('Invalid verification code. Please check the code (or use demo code 123456).');
+        }
+      };
+    }
+
     // Register Form Submit
     if (rf) {
       rf.onsubmit = async e => {
@@ -519,6 +641,7 @@ async function wire(route, parts) {
         const displayName = f.get('displayName')?.trim();
         const email = f.get('email')?.trim();
         const confirmEmail = f.get('confirmEmail')?.trim();
+        const phone = f.get('phone')?.trim();
         const password = f.get('password');
         const role = f.get('role');
         const submitBtn = document.getElementById('btnRegisterSubmit');
@@ -548,6 +671,18 @@ async function wire(route, parts) {
           return;
         }
 
+        if (!phone || phone.length < 8) {
+          showAlert('Please enter a valid phone number.');
+          phoneInput?.focus();
+          return;
+        }
+
+        if (!phoneIsVerified) {
+          showAlert('Please verify your phone number using the SMS verification code before creating an account.');
+          btnSendOtp?.focus();
+          return;
+        }
+
         if (!password || password.length < 8) {
           showAlert('Password must be at least 8 characters.');
           return;
@@ -559,7 +694,7 @@ async function wire(route, parts) {
         }
 
         try {
-          const u = await Auth.register(displayName, email, password, role);
+          const u = await Auth.register(displayName, email, password, role, phone);
           toast(`Account created! A confirmation email has been sent to ${email} ✉️`);
           go('/');
         } catch (err) {

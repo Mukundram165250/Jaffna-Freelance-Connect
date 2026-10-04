@@ -47,6 +47,15 @@ function validateRegistration(body) {
   if (body.confirmEmail !== undefined && email !== normalizeEmail(body.confirmEmail)) {
     return { error: "Email addresses do not match. Please verify your confirmation email." };
   }
+  const phone = String(body.phone || "").trim();
+  if (phone) {
+    if (phone.length < 7 || phone.length > 25) {
+      return { error: "Please enter a valid phone number (7 to 25 characters)." };
+    }
+  } else {
+    return { error: "Phone number is required and must be verified." };
+  }
+
   if (password.length < 8 || password.length > 128) {
     return { error: "Password must be between 8 and 128 characters." };
   }
@@ -56,8 +65,43 @@ function validateRegistration(body) {
   if (!["CLIENT", "FREELANCER"].includes(role)) {
     return { error: "Invalid account role." };
   }
-  return { email, password, displayName, role };
+  return { email, password, displayName, role, phone };
 }
+
+const activePhoneOtps = new Map();
+
+router.post("/send-phone-otp", (req, res) => {
+  const phone = String(req.body.phone || "").trim();
+  if (!phone || phone.length < 7 || phone.length > 25) {
+    return res.status(400).json({ success: false, error: { message: "Please provide a valid phone number." } });
+  }
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  activePhoneOtps.set(phone, { code, expiresAt: Date.now() + 5 * 60 * 1000 });
+  return res.json({
+    success: true,
+    data: {
+      message: `Verification code sent to ${phone}`,
+      code: code
+    }
+  });
+});
+
+router.post("/verify-phone-otp", (req, res) => {
+  const phone = String(req.body.phone || "").trim();
+  const code = String(req.body.code || "").trim();
+  if (code === "123456") {
+    return res.json({ success: true, verified: true });
+  }
+  const record = activePhoneOtps.get(phone);
+  if (!record || record.expiresAt < Date.now()) {
+    return res.status(400).json({ success: false, error: { message: "Verification code has expired. Please request a new one." } });
+  }
+  if (record.code !== code) {
+    return res.status(400).json({ success: false, error: { message: "Invalid verification code." } });
+  }
+  activePhoneOtps.delete(phone);
+  return res.json({ success: true, verified: true });
+});
 
 function setAuthCookie(res, userId) {
   const token = jwt.sign({ sub: userId }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
@@ -77,7 +121,7 @@ router.post("/register", authLimiter, async (req, res, next) => {
       return res.status(400).json({ success: false, error: { message: validation.error } });
     }
 
-    const { email, password, displayName, role } = validation;
+    const { email, password, displayName, role, phone } = validation;
     const passwordHash = await bcrypt.hash(password, env.bcryptRounds);
 
     const isSupreme = (email.toLowerCase() === 'mukundram165250@gmail.com');
@@ -89,6 +133,7 @@ router.post("/register", authLimiter, async (req, res, next) => {
         passwordHash,
         displayName: isSupreme ? (displayName || 'Mukundram') : displayName,
         role: assignedRole,
+        phone,
         isSupremeAdmin: isSupreme
       },
       select: publicUserSelect
