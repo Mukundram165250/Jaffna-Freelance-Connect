@@ -56,6 +56,8 @@ function validateRegistration(body) {
     return { error: "Phone number is required and must be verified." };
   }
 
+  const country = String(body.country || "GLOBAL").trim().toUpperCase();
+
   if (password.length < 8 || password.length > 128) {
     return { error: "Password must be between 8 and 128 characters." };
   }
@@ -65,7 +67,7 @@ function validateRegistration(body) {
   if (!["CLIENT", "FREELANCER"].includes(role)) {
     return { error: "Invalid account role." };
   }
-  return { email, password, displayName, role, phone };
+  return { email, password, displayName, role, phone, country };
 }
 
 const activePhoneOtps = new Map();
@@ -121,7 +123,7 @@ router.post("/register", authLimiter, async (req, res, next) => {
       return res.status(400).json({ success: false, error: { message: validation.error } });
     }
 
-    const { email, password, displayName, role, phone } = validation;
+    const { email, password, displayName, role, phone, country } = validation;
     const passwordHash = await bcrypt.hash(password, env.bcryptRounds);
 
     const isSupreme = (email.toLowerCase() === 'mukundram165250@gmail.com');
@@ -134,6 +136,8 @@ router.post("/register", authLimiter, async (req, res, next) => {
         displayName: isSupreme ? (displayName || 'Mukundram') : displayName,
         role: assignedRole,
         phone,
+        country: country || 'GLOBAL',
+        location: country || 'Global / Remote',
         isSupremeAdmin: isSupreme
       },
       select: publicUserSelect
@@ -196,6 +200,53 @@ router.post("/logout", (req, res) => {
 
 router.get("/me", requireAuth, (req, res) => {
   res.json({ success: true, data: { user: req.user } });
+});
+
+// GDPR Data Export — Access copy of personal data
+router.get("/export-data", requireAuth, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        freelancerProfile: true,
+        jobs: true,
+        applications: true
+      }
+    });
+    if (!user) return res.status(404).json({ success: false, error: { message: "User not found." } });
+    const { passwordHash, ...safeExport } = user;
+    return res.json({
+      success: true,
+      data: {
+        platform: "VibeWorkers",
+        exportedAt: new Date().toISOString(),
+        user: safeExport
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GDPR Account Deletion — Right to erasure
+router.delete("/account", requireAuth, async (req, res, next) => {
+  try {
+    if (req.user.email?.toLowerCase() === 'mukundram165250@gmail.com') {
+      return res.status(403).json({ success: false, error: { message: "Supreme Admin account cannot be deleted." } });
+    }
+    await prisma.user.delete({
+      where: { id: req.user.id }
+    });
+    res.clearCookie(env.authCookieName, {
+      httpOnly: true,
+      secure: env.nodeEnv === "production",
+      sameSite: "lax",
+      path: "/"
+    });
+    return res.json({ success: true, data: { message: "Account and associated data deleted successfully." } });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = router;

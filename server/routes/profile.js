@@ -9,6 +9,7 @@ const publicUserSelect = {
   displayName: true,
   role: true,
   phone: true,
+  country: true,
   location: true,
   createdAt: true,
   updatedAt: true
@@ -22,6 +23,8 @@ const freelancerProfileSelect = {
   skills: true,
   experienceLevel: true,
   hourlyRate: true,
+  hourlyCurrency: true,
+  country: true,
   availability: true,
   moderation: true,
   createdAt: true,
@@ -31,6 +34,7 @@ const freelancerProfileSelect = {
 const publicFreelancerSelect = {
   id: true,
   displayName: true,
+  country: true,
   location: true,
   freelancerProfile: {
     select: {
@@ -40,6 +44,8 @@ const publicFreelancerSelect = {
       skills: true,
       experienceLevel: true,
       hourlyRate: true,
+      hourlyCurrency: true,
+      country: true,
       availability: true,
       createdAt: true,
       updatedAt: true
@@ -72,10 +78,13 @@ function validateUserUpdates(body) {
 
 function validateFreelancerUpdates(body) {
   const updates = {};
-  for (const [field, maxLength] of [["headline",160],["bio",2000],["availability",200]]) {
+  for (const [field, maxLength] of [["headline",160],["bio",2000],["availability",200],["country",50],["hourlyCurrency",10]]) {
     const result = cleanOptionalString(body[field], field, maxLength);
     if (result.error) return result;
     if (result.value !== undefined) updates[field] = result.value;
+  }
+  if (updates.hourlyCurrency) {
+    updates.hourlyCurrency = updates.hourlyCurrency.toUpperCase();
   }
   if (body.skills !== undefined) {
     if (!Array.isArray(body.skills) || body.skills.length > 30) return { error: "Skills must be an array containing at most 30 items." };

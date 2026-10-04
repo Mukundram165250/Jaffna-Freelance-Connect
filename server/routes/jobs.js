@@ -53,7 +53,10 @@ function validateJob(body, partial = false) {
     ["description", 5000, true],
     ["category", 100, false],
     ["location", 150, false],
-    ["contact", 200, false]
+    ["contact", 200, false],
+    ["currency", 10, false],
+    ["workplaceType", 25, false],
+    ["country", 50, false]
   ];
 
   for (const [field, maxLength, required] of fields) {
@@ -61,6 +64,11 @@ function validateJob(body, partial = false) {
     const result = cleanString(body[field], field, maxLength, required && !partial);
     if (result.error) return result;
     data[field] = result.value;
+  }
+
+  if (!partial) {
+    data.currency = (data.currency || "USD").toUpperCase();
+    data.workplaceType = (data.workplaceType || "REMOTE").toUpperCase();
   }
 
   const skills = cleanSkills(body.skills);
@@ -88,6 +96,9 @@ function validateJob(body, partial = false) {
 function serializeJob(job) {
   return {
     ...job,
+    currency: (job.currency || "USD").toUpperCase(),
+    workplaceType: (job.workplaceType || "REMOTE").toUpperCase(),
+    country: job.country || "GLOBAL",
     budgetMin: job.budgetMin?.toString() ?? null,
     budgetMax: job.budgetMax?.toString() ?? null
   };
@@ -102,6 +113,9 @@ const publicJobSelect = {
   budgetMin: true,
   budgetMax: true,
   location: true,
+  currency: true,
+  workplaceType: true,
+  country: true,
   status: true,
   createdAt: true,
   updatedAt: true,

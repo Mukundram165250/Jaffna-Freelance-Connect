@@ -1,102 +1,84 @@
-# 🌴 Jaffna Freelance Connect — Firebase Migration
+# ⚡ VibeWorkers — Work Globally. Connect Freely.
 
-A modern freelance marketplace connecting local talent with opportunity in **Jaffna, Sri Lanka**.
+**Official Global Freelance Marketplace**
 
-**Production Architecture**:
-- **Frontend**: GitHub Pages (Pure HTML, CSS, JavaScript SPA)
-- **Backend & Database**: Google Firebase (Authentication, Cloud Firestore, Cloud Functions)
-- **Security**: Hardened Firestore Security Rules (ABAC & RBAC)
+> **Created by Mukundram**  
+> **Instagram**: [@revolutionary_scout](https://www.instagram.com/revolutionary_scout/)
+
+*Historical Note: VibeWorkers was originally started as Jaffna Freelance Connect by Mukundram.*
 
 ---
 
-## 🚀 Migration Roadmap
+## 🌍 Overview
 
-- [x] **Phase 1: Repository Inspection & Firebase Foundation**
-  - Provisioned Firebase project and Cloud Firestore database (`sinuous-brace-583d0`)
-  - Created Intermediate Representation schema (`firebase-blueprint.json`)
-  - Configured project rules (`firestore.rules`) and deployed via Firebase RPC
-  - Defined query compound indexes (`firestore.indexes.json`)
-  - Created Cloud Functions modular architecture (`functions/`)
-  - Created client-side Firebase configuration (`js/firebase/firebase-config.js`)
-  - Implemented standardized Firestore error handling (`js/firebase/firestore-errors.js`)
-  - Drafted comprehensive security specification (`security_spec.md`)
-- [x] **Phase 2: Authentication System**
-  - Firebase Authentication (Email/Password & Google Sign-In)
-  - Role-based account creation (`CLIENT` & `FREELANCER`)
-  - Protected routes and session management
-  - Pre-rendered accessible login/registration form structure
-  - Seamless auth synchronization (`js/firebase/auth-service.js`)
-- [ ] **Phase 3: Freelancer Profiles**
-  - Profile creation, skills, hourly rate, and portfolio management
-  - Admin moderation and public directory listing
-- [ ] **Phase 4: Job Management**
-  - Client job posting, editing, and closing
-  - Public job search, categories, and LKR budget filtering
-- [ ] **Phase 5: Application System**
-  - Application submission with duplicate prevention
-  - Client acceptance/rejection and freelancer withdrawal
-- [ ] **Phase 6: Admin Dashboard**
-  - Secure moderation of jobs and profiles
-  - User management and platform analytics
-- [ ] **Phase 7: Production Deployment**
-  - GitHub Pages deployment and Firebase domain authorization
-- [ ] **Phase 8: Future Enhancements**
-  - Real-time notifications and AI-assisted skill matching
+**VibeWorkers** is an international freelance marketplace connecting talented independent professionals, remote workers, students, and businesses worldwide. Designed without regional boundaries, VibeWorkers enables global collaboration with multi-currency job budgets, country selection, verified accounts, and modern privacy protection.
+
+**Platform Highlights**:
+- **Work Globally, Connect Freely**: Open to freelancers and clients worldwide with remote, hybrid, and location-based opportunities.
+- **Multi-Currency Budgets**: Explicit currency assignment across USD, EUR, GBP, LKR, INR, CAD, AUD, AED, and SGD.
+- **Account Verification**: Two-step account verification with email confirmation and phone verification.
+- **Contact Privacy**: Clients and freelancers do not need to publicly expose email or phone numbers when posting jobs or submitting offers.
+- **GDPR & Privacy Charter**: In-app self-service data export (JSON) and permanent account deletion.
+- **Supreme Admin Management**: Dedicated system management and role administration.
+
+---
+
+## 🏗️ Architecture
+
+- **Frontend**: Lightweight SPA (Semantic HTML5, CSS3 with modern gradient accents, JavaScript ES Modules).
+- **Authentication**: Firebase Authentication (Email/Password & Google Sign-In with email verification status) with fallback Express API.
+- **Database & Persistence**: Google Cloud Firestore & Relational SQLite/PostgreSQL (Prisma).
+- **Security & Authorization**: Role-based access control (`CLIENT`, `FREELANCER`, `ADMIN`) with Firebase security rules.
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-Jaffna-Freelance-Connect/
-├── index.html                   # Main frontend single-page application
+VibeWorkers/
+├── index.html                   # Global single-page application entry point
 ├── css/
-│   └── style.css                # Visual design and responsive layouts
+│   └── style.css                # Global responsive styling with purple/pink accents
 ├── js/
-│   ├── app.js                   # Application state and UI routing
+│   ├── app.js                   # Application state, router, and UI views
 │   └── firebase/
-│       ├── firebase-config.js   # Client Firebase configuration
-│       └── firestore-errors.js  # Standardized Firestore error handler
-├── functions/                   # Cloud Functions for Firebase (Node.js 22)
-│   ├── package.json
-│   ├── index.js                 # Exported callable functions
-│   └── src/
-│       ├── config/              # Admin SDK initialization
-│       ├── middleware/          # Auth and Admin guards
-│       ├── auth/                # Auth triggers & admin claims
-│       ├── jobs/                # Job mutations & closures
-│       ├── profiles/            # Profile retrieval & updates
-│       ├── applications/        # Secure application transactions
-│       └── admin/               # Moderation & stats
-├── firebase.json                # Firebase emulator and deployment config
-├── .firebaserc.example          # Firebase project alias template
+│       ├── firebase-config.js   # Client Firebase SDK configuration
+│       ├── firestore-errors.js  # Standardized Firestore error handler
+│       └── auth-service.js      # Global authentication and profile service
+├── server/                      # Full-stack Node.js/Express API server
+│   ├── routes/                  # Modular endpoints (auth, jobs, profiles, etc.)
+│   └── config/                  # Database configuration and environment
 ├── firestore.rules              # Deployed Firestore security rules
 ├── firestore.indexes.json       # Compound query indexes
-├── firebase-blueprint.json      # Complete data entity blueprint
-├── security_spec.md             # Threat model & Dirty Dozen attack tests
-├── server/                      # Existing legacy Express server (preserved)
-├── prisma/                      # Existing database migrations (preserved)
+├── firebase-blueprint.json      # Firestore entity schema representation
 └── package.json
 ```
 
 ---
 
-## 🔒 Security Architecture
-1. **Zero-Trust Rules**: Default deny catch-all on all documents.
-2. **Role Protection**: Ordinary users cannot self-assign `ADMIN` or alter account roles.
-3. **Content Moderation**: Newly created jobs and freelancer profiles must be `APPROVED` by an administrator before appearing in public listings.
-4. **Data Isolation**: Application submissions and private notifications are strictly limited to authorized participants.
+## 🔒 Security & Privacy
+
+1. **Email & Phone Verification**: Validated authentication prevents spam and verifies legitimate international users.
+2. **Contact Privacy**: Contact information is securely linked to accounts; users never expose personal phone/email on public listings.
+3. **GDPR Data Rights**: Users can export their complete profile data or trigger permanent account deletion directly.
+4. **Moderation Architecture**: Listings and profiles pass through moderation before public visibility.
 
 ---
 
-## 🛠️ Local Development & Emulators
+## 🛠️ Local Development
+
 ```bash
-# Start the local development server
+# Install dependencies
+npm install
+
+# Start the local development server (port 3000)
 npm run dev
 
-# Start Firebase Emulators (when firebase-tools is installed)
-firebase emulators:start
+# Lint server and scripts
+npm run lint
 ```
 
 ---
-Built with ❤️ for the Jaffna community.
+
+**VibeWorkers** · Work Globally. Connect Freely.  
+Created by **Mukundram** · [Instagram: @revolutionary_scout](https://www.instagram.com/revolutionary_scout/)

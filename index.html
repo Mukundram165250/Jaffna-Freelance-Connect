@@ -3,20 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jaffna Freelance Connect — Hire Local Talent</title>
-<meta name="description" content="Jaffna's #1 freelance marketplace. Post jobs, offer services, connect with local talent.">
+<title>VibeWorkers — Work Globally. Connect Freely.</title>
+<meta name="description" content="VibeWorkers is a global freelance marketplace connecting talented independent professionals, remote workers, students, and businesses worldwide. Created by Mukundram.">
+<meta property="og:title" content="VibeWorkers — Work Globally. Connect Freely.">
+<meta property="og:description" content="Global freelance marketplace connecting top international talent with worldwide clients. Created by Mukundram.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="VibeWorkers">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌴</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 </head>
 <body>
 
 <!-- ======= NAVBAR ======= -->
 <nav class="navbar">
   <div class="container nav-inner">
-    <a href="#/" class="brand"><span class="brand-icon">🌴</span> Jaffna<span>Freelance</span>Connect</a>
+    <a href="#/" class="brand"><span class="brand-icon">⚡</span> Vibe<span>Workers</span></a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
     <div class="nav-links" id="navLinks">
       <a href="#/" data-route="home">Home</a>
@@ -24,6 +28,7 @@
       <a href="#/freelancers" data-route="freelancers">Freelancers</a>
       <a href="#/post-job" data-route="post-job">Post a Job</a>
       <a href="#/offer-service" data-route="offer-service">Offer a Service</a>
+      <a href="#/about" data-route="about">About</a>
       <span id="navAuth"></span>
     </div>
   </div>
@@ -37,9 +42,9 @@
   <div class="container fade-in">
     <div class="auth-wrap">
       <div class="auth-header">
-        <span class="auth-badge">🌴 Jaffna Freelance Connect</span>
+        <span class="auth-badge">⚡ VibeWorkers Global</span>
         <h2 id="authHeading">Welcome Back 👋</h2>
-        <p id="authSubheading" class="sub">Sign in or create your account to connect with Jaffna's top opportunities</p>
+        <p id="authSubheading" class="sub">Work Globally. Connect Freely. Sign in or create your account to explore worldwide opportunities</p>
       </div>
 
       <div class="auth-tabs" role="tablist" aria-label="Authentication tabs">
@@ -160,6 +165,24 @@
         </div>
 
         <div class="form-group">
+          <label for="regCountrySelect"><i class="fa-solid fa-globe"></i> Country / Region</label>
+          <select id="regCountrySelect" name="country" required>
+            <option value="GLOBAL" selected>🌐 Global / Remote</option>
+            <option value="US">🇺🇸 United States</option>
+            <option value="GB">🇬🇧 United Kingdom</option>
+            <option value="CA">🇨🇦 Canada</option>
+            <option value="AU">🇦🇺 Australia</option>
+            <option value="LK">🇱🇰 Sri Lanka</option>
+            <option value="IN">🇮🇳 India</option>
+            <option value="DE">🇩🇪 Germany</option>
+            <option value="FR">🇫🇷 France</option>
+            <option value="SG">🇸🇬 Singapore</option>
+            <option value="AE">🇦🇪 United Arab Emirates</option>
+            <option value="OTHER">🌍 Other International</option>
+          </select>
+        </div>
+
+        <div class="form-group">
           <label for="regRoleSelect"><i class="fa-solid fa-briefcase"></i> Account Type</label>
           <select id="regRoleSelect" name="role" required>
             <option value="FREELANCER" selected>Freelancer — I offer skills and services</option>
@@ -185,8 +208,11 @@
 <footer class="footer">
   <div class="container footer-grid">
     <div>
-      <a href="#/" class="brand light"><span class="brand-icon">🌴</span> Jaffna<span>Freelance</span>Connect</a>
-      <p>Connecting Jaffna's talent with opportunity. Post jobs, offer skills, grow together.</p>
+      <a href="#/" class="brand light"><span class="brand-icon">⚡</span> Vibe<span>Workers</span></a>
+      <p style="margin-top:8px;font-size:0.92rem;line-height:1.5;color:rgba(255,255,255,0.85)"><b>Work Globally. Connect Freely.</b><br>The international freelance marketplace connecting talent, remote workers, and clients worldwide.</p>
+      <div style="margin-top:14px;font-size:0.86rem;color:rgba(255,255,255,0.75)">
+        Created by <b>Mukundram</b> · <a href="https://www.instagram.com/revolutionary_scout/" target="_blank" rel="noopener noreferrer" style="color:#f472b6;text-decoration:underline;"><i class="fa-brands fa-instagram"></i> @revolutionary_scout</a>
+      </div>
     </div>
     <div>
       <h4>Explore</h4>
@@ -196,17 +222,23 @@
       <a href="#/offer-service">Offer a Service</a>
     </div>
     <div>
-      <h4>Account</h4>
-      <a href="#/login">Login / Register</a>
+      <h4>Platform & Legal</h4>
+      <a href="#/about">About VibeWorkers</a>
+      <a href="#/privacy">Privacy Policy</a>
+      <a href="#/terms">Terms of Service</a>
       <a href="#/admin">Admin Panel</a>
     </div>
     <div>
-      <h4>Contact</h4>
-      <a href="mailto:hello@jaffnafreelance.lk"><i class="fa-solid fa-envelope"></i> hello@jaffnafreelance.lk</a>
-      <a href="#"><i class="fa-solid fa-location-dot"></i> Jaffna, Sri Lanka</a>
+      <h4>Connect</h4>
+      <a href="https://www.instagram.com/revolutionary_scout/" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-instagram" style="color:#ec4899"></i> Instagram: @revolutionary_scout</a>
+      <a href="mailto:contact@vibeworkers.com"><i class="fa-solid fa-envelope"></i> contact@vibeworkers.com</a>
+      <a href="#/"><i class="fa-solid fa-globe"></i> Global / Worldwide</a>
     </div>
   </div>
-  <div class="footer-bottom">© 2026 Jaffna Freelance Connect · Built with ❤️ in Jaffna</div>
+  <div class="footer-bottom" style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;font-size:0.85rem">
+    <span>© 2026 VibeWorkers · Work Globally. Connect Freely. · Created by Mukundram (<a href="https://www.instagram.com/revolutionary_scout/" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">@revolutionary_scout</a>)</span>
+    <span style="opacity:0.8;font-size:0.8rem">VibeWorkers was originally started as Jaffna Freelance Connect by Mukundram.</span>
+  </div>
 </footer>
 
 <!-- ======= SCRIPTS ======= -->

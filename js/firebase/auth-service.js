@@ -108,12 +108,13 @@ async function fetchUserProfile(uid, fallbackEmail = "", fallbackDisplayName = "
     return {
       uid,
       email: fallbackEmail || profileData?.email || "",
-      displayName: fallbackDisplayName || profileData?.displayName || (isSupreme ? "Mukundram" : "Jaffna Member"),
+      displayName: fallbackDisplayName || profileData?.displayName || (isSupreme ? "Mukundram" : "VibeWorker"),
       role,
       isSupremeAdmin: isSupreme,
       emailVerified: Boolean(auth.currentUser?.emailVerified),
       phone: profileData?.phone || "",
       phoneVerified: Boolean(profileData?.phoneVerified),
+      country: profileData?.country || "GLOBAL",
       accountStatus: profileData?.accountStatus || 'ACTIVE',
       createdAt: profileData?.createdAt || new Date().toISOString()
     };
@@ -127,12 +128,13 @@ async function fetchUserProfile(uid, fallbackEmail = "", fallbackDisplayName = "
     return {
       uid,
       email: fallbackEmail,
-      displayName: fallbackDisplayName || (isSupreme ? "Mukundram" : "Jaffna Member"),
+      displayName: fallbackDisplayName || (isSupreme ? "Mukundram" : "VibeWorker"),
       role: (isSupreme || fallbackEmail === 'admin@jaffnafreelance.lk') ? 'ADMIN' : 'FREELANCER',
       isSupremeAdmin: isSupreme,
       emailVerified: Boolean(auth.currentUser?.emailVerified),
       phone: "",
-      phoneVerified: false
+      phoneVerified: false,
+      country: "GLOBAL"
     };
   }
 }
@@ -175,7 +177,7 @@ const JFCAuth = {
     return userProfile;
   },
 
-  async register(displayName, email, password, role = 'FREELANCER', phone = '') {
+  async register(displayName, email, password, role = 'FREELANCER', phone = '', country = 'GLOBAL') {
     const safeRole = role === 'CLIENT' ? 'CLIENT' : 'FREELANCER';
     const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
     const user = cred.user;
@@ -193,6 +195,7 @@ const JFCAuth = {
       displayName: displayName.trim() || user.email.split('@')[0],
       phone: phone.trim() || null,
       phoneVerified: Boolean(phone.trim()),
+      country: (country || 'GLOBAL').toUpperCase(),
       role: safeRole,
       accountStatus: 'ACTIVE',
       createdAt: new Date().toISOString(),

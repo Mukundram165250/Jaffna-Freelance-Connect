@@ -17,7 +17,7 @@ if (isRealDbConfigured) {
     prisma = inMemoryDb;
   }
 } else {
-  console.info("[AI Studio] Using in-memory mock store for Jaffna Freelance Connect");
+  console.info("[AI Studio] Using in-memory mock store for VibeWorkers");
   prisma = inMemoryDb;
 }
 

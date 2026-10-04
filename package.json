@@ -2,7 +2,7 @@
   "name": "jaffna-freelance-connect",
   "version": "1.0.0",
   "private": true,
-  "description": "Jaffna Freelance Connect backend and frontend application",
+  "description": "VibeWorkers — Work Globally. Connect Freely. Created by Mukundram.",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
