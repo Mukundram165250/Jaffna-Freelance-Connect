@@ -433,6 +433,10 @@ Pages.freelancers = () => `
           <input id="slAvailable" name="availableNow" type="checkbox" style="width:auto">
           Available now only
         </label>
+        <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px">
+          <input id="slDemoMode" name="demoMode" type="checkbox" style="width:auto">
+          Show demo listings (fictional sample data)
+        </label>
         <div style="display:flex;align-items:end">
           <button class="btn btn-primary" type="submit" style="width:100%"><i class="fa-solid fa-filter"></i> Search services</button>
         </div>
@@ -1054,15 +1058,18 @@ async function wire(route, parts) {
           minPrice,
           maxPrice,
           availableNow: document.getElementById('slAvailable')?.checked || false,
+          demoMode: document.getElementById('slDemoMode')?.checked || false,
           sort: form.get('sort'),
           limit: 24,
           offset: 0
         });
         if (error) throw error;
         const listings = Array.isArray(data) ? data : [];
-        serviceStatus.textContent = listings.length
-          ? `Showing ${listings.length} service listing${listings.length === 1 ? '' : 's'}.`
-          : 'No active services match those filters yet. Try broadening your search.';
+        const demoMode = document.getElementById('slDemoMode')?.checked || false;
+        serviceStatus.textContent = (demoMode ? 'DEMO MODE — fictional examples only; nothing is saved. ' : '')
+          + (listings.length
+            ? `Showing ${listings.length} service listing${listings.length === 1 ? '' : 's'}.`
+            : 'No active services match those filters yet. Try broadening your search.');
         serviceGrid.innerHTML = listings.map(item => {
           const name = item.freelancer_name || 'Freelancer';
           const initialsText = name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase();
@@ -1078,6 +1085,7 @@ async function wire(route, parts) {
           const fulfilment = item.fulfilment_type === 'appointment' ? 'Appointment' : 'Deadline-based';
           const ratingText = reviews ? '⭐ ' + rating.toFixed(2) + ' (' + reviews + ')' : '☆ New · No reviews yet';
           return '<article class="card fade-in">' +
+            (demoMode ? '<div class="badge badge-new" style="margin-bottom:8px">DEMO · NOT A REAL SERVICE</div>' : '') +
             '<div class="card-top"><h3>' + esc(item.title) + '</h3>' + availability + '</div>' +
             '<div class="card-meta"><span><i class="fa-solid fa-tag"></i> ' + esc(item.category) + '</span><span>' + place + '</span><span><i class="fa-regular fa-calendar"></i> ' + fulfilment + '</span></div>' +
             '<p class="desc">' + esc(item.description) + '</p>' +
@@ -1095,6 +1103,7 @@ async function wire(route, parts) {
       event.preventDefault();
       renderServices();
     });
+    document.getElementById('slDemoMode')?.addEventListener('change', renderServices);
     renderServices();
 
     const render = async () => {
