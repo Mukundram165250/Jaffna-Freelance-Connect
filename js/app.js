@@ -378,24 +378,89 @@ Pages.jobs = () => `
 Pages.freelancers = () => `
   <div class="page-head">
     <div class="container">
-      <h1><i class="fa-solid fa-users" style="color:var(--primary)"></i> Browse Global Freelancers</h1>
-      <p>Hire independent talent and remote professionals from around the world</p>
+      <h1><i class="fa-solid fa-users" style="color:var(--primary)"></i> Discover Freelancers & Services</h1>
+      <p>Search active services, compare prices and ratings, and find people ready to work</p>
     </div>
   </div>
   <div class="container" style="padding-bottom:64px">
-    <div class="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap">
-      <div class="search-box" style="flex:2;min-width:240px">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input id="fSearch" placeholder="Search by name, skill, or country…">
+    <section style="margin:24px 0 36px">
+      <div class="section-head" style="margin-bottom:16px">
+        <div>
+          <h2><i class="fa-solid fa-magnifying-glass" style="color:var(--primary)"></i> Find a Service</h2>
+          <p>Browse active service listings from the Vibelancers service database</p>
+        </div>
       </div>
-      <select id="fLevel" style="flex:1;min-width:160px">
-        <option value="">Any Level</option>
-        <option value="BEGINNER">Beginner / Student</option>
-        <option value="INTERMEDIATE">Intermediate</option>
-        <option value="EXPERT">Expert</option>
-      </select>
-    </div>
-    <div class="grid grid-3" id="fGrid"></div>
+      <form id="serviceSearchForm" class="filter-bar" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end">
+        <div class="form-group" style="margin:0">
+          <label for="slSearch">Search</label>
+          <input id="slSearch" name="search" placeholder="e.g. logo design, tutoring">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label for="slCategory">Category</label>
+          <input id="slCategory" name="category" placeholder="e.g. Design">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label for="slScope">Service type</label>
+          <select id="slScope" name="scope">
+            <option value="">Local or online</option>
+            <option value="online">🌐 Online</option>
+            <option value="local">📍 Local</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label for="slArea">Area (local services)</label>
+          <input id="slArea" name="area" placeholder="e.g. Jaffna">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label for="slMinPrice">Minimum price (LKR)</label>
+          <input id="slMinPrice" name="minPrice" type="number" min="0" step="0.01" placeholder="0">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label for="slMaxPrice">Maximum price (LKR)</label>
+          <input id="slMaxPrice" name="maxPrice" type="number" min="0" step="0.01" placeholder="No limit">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label for="slSort">Sort by</label>
+          <select id="slSort" name="sort">
+            <option value="recommended">Recommended / newest</option>
+            <option value="available">Available now first</option>
+            <option value="rating">Highest rating</option>
+            <option value="price_low">Price: low to high</option>
+            <option value="price_high">Price: high to low</option>
+          </select>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px">
+          <input id="slAvailable" name="availableNow" type="checkbox" style="width:auto">
+          Available now only
+        </label>
+        <div style="display:flex;align-items:end">
+          <button class="btn btn-primary" type="submit" style="width:100%"><i class="fa-solid fa-filter"></i> Search services</button>
+        </div>
+      </form>
+      <p id="serviceSearchStatus" role="status" aria-live="polite" style="margin:14px 0;color:var(--ink-3)">Loading service listings…</p>
+      <div class="grid grid-3" id="serviceDiscoveryGrid"></div>
+    </section>
+    <section style="border-top:1px solid var(--border);padding-top:28px">
+      <div class="section-head">
+        <div>
+          <h2><i class="fa-solid fa-user-group" style="color:var(--primary)"></i> Freelancer Profiles</h2>
+          <p>Browse profiles from the existing website directory</p>
+        </div>
+      </div>
+      <div class="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="search-box" style="flex:2;min-width:240px">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input id="fSearch" placeholder="Search by name, skill, or country…">
+        </div>
+        <select id="fLevel" style="flex:1;min-width:160px">
+          <option value="">Any Level</option>
+          <option value="BEGINNER">Beginner / Student</option>
+          <option value="INTERMEDIATE">Intermediate</option>
+          <option value="EXPERT">Expert</option>
+        </select>
+      </div>
+      <div class="grid grid-3" id="fGrid"></div>
+    </section>
   </div>
 `;
 
@@ -956,6 +1021,82 @@ async function wire(route, parts) {
     render();
   }
   if (route === 'freelancers') {
+    const serviceForm = document.getElementById('serviceSearchForm');
+    const serviceGrid = document.getElementById('serviceDiscoveryGrid');
+    const serviceStatus = document.getElementById('serviceSearchStatus');
+
+    const renderServices = async () => {
+      if (!serviceGrid || !serviceStatus) return;
+      const discovery = window.VibelancersServiceDiscovery;
+      if (!discovery || !discovery.ready) {
+        serviceStatus.textContent = 'Service search is temporarily unavailable. Existing freelancer profiles are still available below.';
+        serviceGrid.innerHTML = '';
+        return;
+      }
+
+      const form = new FormData(serviceForm);
+      const minPrice = String(form.get('minPrice') || '').trim();
+      const maxPrice = String(form.get('maxPrice') || '').trim();
+      if (minPrice && maxPrice && Number(minPrice) > Number(maxPrice)) {
+        serviceStatus.textContent = 'Minimum price must not be greater than maximum price.';
+        serviceGrid.innerHTML = '';
+        return;
+      }
+
+      serviceStatus.textContent = 'Searching active services…';
+      serviceGrid.innerHTML = '';
+      try {
+        const { data, error } = await discovery.search({
+          search: form.get('search'),
+          category: form.get('category'),
+          scope: form.get('scope'),
+          area: form.get('area'),
+          minPrice,
+          maxPrice,
+          availableNow: document.getElementById('slAvailable')?.checked || false,
+          sort: form.get('sort'),
+          limit: 24,
+          offset: 0
+        });
+        if (error) throw error;
+        const listings = Array.isArray(data) ? data : [];
+        serviceStatus.textContent = listings.length
+          ? `Showing ${listings.length} service listing${listings.length === 1 ? '' : 's'}.`
+          : 'No active services match those filters yet. Try broadening your search.';
+        serviceGrid.innerHTML = listings.map(item => {
+          const name = item.freelancer_name || 'Freelancer';
+          const initialsText = name.trim().split(/\\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase();
+          const rating = Number(item.average_rating || 0);
+          const reviews = Number(item.review_count || 0);
+          const price = item.freelancer_price === null || item.freelancer_price === undefined
+            ? (item.pricing_mode === 'platform_set' ? 'Platform pricing' : 'Price on request')
+            : 'LKR ' + Number(item.freelancer_price).toLocaleString('en-LK', { maximumFractionDigits: 2 }) + (item.price_type === 'hourly' ? ' / hour' : '');
+          const availability = item.available_now
+            ? '<span class="badge badge-verified"><i class="fa-solid fa-circle" style="font-size:.55rem"></i> Available now</span>'
+            : '<span class="badge badge-new">Not marked available</span>';
+          const place = item.service_scope === 'online' ? '🌐 Online service' : '📍 ' + esc(item.service_area || 'Local service');
+          const fulfilment = item.fulfilment_type === 'appointment' ? 'Appointment' : 'Deadline-based';
+          const ratingText = reviews ? '⭐ ' + rating.toFixed(2) + ' (' + reviews + ')' : '☆ New · No reviews yet';
+          return '<article class="card fade-in">' +
+            '<div class="card-top"><h3>' + esc(item.title) + '</h3>' + availability + '</div>' +
+            '<div class="card-meta"><span><i class="fa-solid fa-tag"></i> ' + esc(item.category) + '</span><span>' + place + '</span><span><i class="fa-regular fa-calendar"></i> ' + fulfilment + '</span></div>' +
+            '<p class="desc">' + esc(item.description) + '</p>' +
+            '<div style="display:flex;align-items:center;gap:10px;margin:14px 0"><span class="f-avatar" style="flex:0 0 42px;width:42px;height:42px">' + esc(initialsText || 'F') + '</span><div><b>' + esc(name) + '</b><div style="font-size:.88rem;color:var(--ink-3)">' + ratingText + '</div></div></div>' +
+            '<div class="card-foot"><div class="price">' + esc(price) + '<br><small>' + (item.price_type === 'hourly' ? 'Hourly rate' : 'Fixed price') + '</small></div><span class="badge badge-level">' + esc(item.service_scope === 'online' ? 'Online' : 'Local') + '</span></div>' +
+            '</article>';
+        }).join('');
+      } catch (e) {
+        serviceStatus.textContent = 'Could not load service listings. Please try again.';
+        serviceGrid.innerHTML = '<div class="empty">' + esc(e.message || 'Service search failed.') + '</div>';
+      }
+    };
+
+    serviceForm?.addEventListener('submit', event => {
+      event.preventDefault();
+      renderServices();
+    });
+    renderServices();
+
     const render = async () => {
       try {
         const r = await api('/profile/freelancers');
