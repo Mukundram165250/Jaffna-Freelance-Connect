@@ -1065,7 +1065,7 @@ async function wire(route, parts) {
           : 'No active services match those filters yet. Try broadening your search.';
         serviceGrid.innerHTML = listings.map(item => {
           const name = item.freelancer_name || 'Freelancer';
-          const initialsText = name.trim().split(/\\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase();
+          const initialsText = name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase();
           const rating = Number(item.average_rating || 0);
           const reviews = Number(item.review_count || 0);
           const price = item.freelancer_price === null || item.freelancer_price === undefined
