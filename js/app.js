@@ -1032,8 +1032,9 @@ async function wire(route, parts) {
     const renderServices = async () => {
       if (!serviceGrid || !serviceStatus) return;
       const discovery = window.VibelancersServiceDiscovery;
-      if (!discovery || !discovery.ready) {
-        serviceStatus.textContent = 'Service search is temporarily unavailable. Existing freelancer profiles are still available below.';
+      const demoModeEnabled = document.getElementById('slDemoMode')?.checked || false;
+      if ((!discovery || !discovery.ready) && !demoModeEnabled) {
+        serviceStatus.textContent = 'Live service search is not configured. Turn on demo listings to preview the interface.';
         serviceGrid.innerHTML = '';
         return;
       }
